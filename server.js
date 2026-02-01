@@ -81,32 +81,42 @@ const upload = multer({
 });
 
 // =============================================================================
-// EMAIL CONFIGURATION
+// EMAIL CONFIGURATION (Internal SMTP Relay - no auth)
 // =============================================================================
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+  host: process.env.SMTP_HOST || '10.27.16.4',
+  port: parseInt(process.env.SMTP_PORT || '25'),
+  secure: false,
+  tls: {
+    rejectUnauthorized: false
   }
 });
 
-async function sendSignatureInviteEmail(email, name, token) {
+/**
+ * Send signature invitation email
+ * @param {string} toEmail - Recipient email
+ * @param {string} name - Recipient name
+ * @param {string} token - Invitation token
+ * @param {object} fromUser - Admin user sending the invite (optional)
+ */
+async function sendSignatureInviteEmail(toEmail, name, token, fromUser = null) {
   const appUrl = process.env.APP_URL || `http://localhost:${PORT}`;
   const setupLink = `${appUrl}/signature-setup.html?token=${token}`;
 
+  // Use admin's email as sender if available, otherwise use default
+  const fromAddress = process.env.SMTP_FROM || 'Signature Verify <signatureVerify@swd.bh>';
+
   const mailOptions = {
-    from: process.env.SMTP_FROM || 'Job Order System <noreply@example.com>',
-    to: email,
+    from: fromAddress,
+    to: toEmail,
     subject: 'Set Up Your Digital Signature - Job Order System',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1A73E8;">Digital Signature Setup</h2>
         <p>Hello ${name},</p>
         <p>You have been invited to set up your digital signature for the Job Order Management System.</p>
+        ${fromUser ? `<p style="color: #666;">Invited by: ${fromUser.name || fromUser.email}</p>` : ''}
         <p>Click the button below to upload or draw your signature:</p>
         <p style="text-align: center; margin: 30px 0;">
           <a href="${setupLink}"
@@ -491,13 +501,13 @@ app.post('/api/admin/invite-signature', adminGuard, async (req, res) => {
     };
     saveDatabase(db);
 
-    // Send email
-    await sendSignatureInviteEmail(email, name, token);
+    // Send email (pass admin user for "invited by" info)
+    await sendSignatureInviteEmail(email, name, token, req.session.user);
 
-    res.json({ ok: true, message: 'Invitation sent successfully' });
+    res.json({ ok: true, message: `Invitation sent to ${email}` });
   } catch (err) {
     console.error('Invite error:', err);
-    res.status(500).json({ error: 'Failed to send invitation' });
+    res.status(500).json({ error: `Failed to send email: ${err.message}` });
   }
 });
 
