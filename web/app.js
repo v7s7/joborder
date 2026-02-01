@@ -126,9 +126,11 @@ function setLoggedIn(user) {
     userInfo.style.display = 'flex';
     loginTrigger.style.display = 'none';
 
-    // Show admin link
+    // Show admin link only for admins
     const adminLink = document.getElementById('adminLink');
-    if (adminLink) adminLink.style.display = 'inline-block';
+    if (adminLink) {
+        adminLink.style.display = user.isAdmin ? 'inline-block' : 'none';
+    }
 
     // Enable form
     jobForm.classList.remove('form-disabled');

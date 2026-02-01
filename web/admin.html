@@ -350,6 +350,14 @@
                 const res = await fetch('/auth/me', { credentials: 'include' });
                 if (!res.ok) {
                     window.location.href = '/';
+                    return;
+                }
+
+                const data = await res.json();
+                if (!data.user || !data.user.isAdmin) {
+                    alert('Access denied. Admin privileges required.');
+                    window.location.href = '/';
+                    return;
                 }
             } catch (err) {
                 window.location.href = '/';

@@ -193,13 +193,30 @@ const authGuard = (req, res, next) => {
   next();
 };
 
+// Parse admin emails from environment
+const ADMIN_EMAILS = process.env.ADMIN_EMAILS
+  ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase())
+  : [];
+
+/**
+ * Check if a user is an admin
+ */
+function isAdmin(user) {
+  if (!user || !user.email) return false;
+  return ADMIN_EMAILS.includes(user.email.toLowerCase());
+}
+
 // Admin guard middleware
 const adminGuard = (req, res, next) => {
-  // For now, all authenticated users can access admin features
-  // You can add role checking here later
   if (!req.session || !req.session.user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  // Check if user email is in admin list
+  if (!isAdmin(req.session.user)) {
+    return res.status(403).json({ error: 'Forbidden', message: 'Admin access required' });
+  }
+
   next();
 };
 
@@ -361,7 +378,13 @@ app.post('/auth/login', async (req, res) => {
         passwordHash: Buffer.from(password).toString('base64')
       };
 
-      return res.json({ ok: true, user: req.session.user });
+      return res.json({
+        ok: true,
+        user: {
+          ...req.session.user,
+          isAdmin: isAdmin(req.session.user)
+        }
+      });
     } else {
       return res.status(401).json({ ok: false, error: 'Invalid credentials' });
     }
@@ -384,7 +407,12 @@ app.post('/auth/logout', (req, res) => {
 
 app.get('/auth/me', (req, res) => {
   if (req.session && req.session.user) {
-    return res.json({ user: req.session.user });
+    return res.json({
+      user: {
+        ...req.session.user,
+        isAdmin: isAdmin(req.session.user)
+      }
+    });
   }
   return res.status(401).json({ error: 'Not authenticated' });
 });
