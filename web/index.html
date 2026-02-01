@@ -8,6 +8,26 @@
 </head>
 <body>
 
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title">Login Required</h2>
+            <p class="modal-subtitle">Please sign in with your Active Directory credentials</p>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Username or Email</label>
+                    <input type="text" id="loginUsername" name="username" placeholder="Enter your username..." required autofocus>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" name="password" placeholder="Enter your password..." required>
+                </div>
+                <div id="loginError" class="error-message" style="display: none;"></div>
+                <button type="submit" class="btn-primary btn-full" id="loginBtn">Sign In</button>
+            </form>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <div class="header-content">
@@ -15,9 +35,19 @@
                     <h1>Job Work Order</h1>
                     <p class="subtitle">Complete the form to generate a new order document</p>
                 </div>
-                <div class="job-badge">
-                    <span>JOB #</span>
-                    <span id="job-number-display" class="job-number">...</span>
+                <div class="header-right">
+                    <div class="job-badge">
+                        <span>JOB #</span>
+                        <span id="job-number-display" class="job-number">...</span>
+                    </div>
+                    <div class="user-section">
+                        <div id="userInfo" class="user-info" style="display: none;">
+                            <span class="user-avatar" id="userAvatar">U</span>
+                            <span class="user-name" id="userName">User</span>
+                            <button type="button" class="btn-logout" id="logoutBtn">Logout</button>
+                        </div>
+                        <button type="button" class="btn-login" id="loginTrigger" style="display: none;">Login</button>
+                    </div>
                 </div>
             </div>
             <div class="status-bar">
@@ -29,7 +59,7 @@
         </header>
 
         <form id="jobForm">
-            
+
             <section class="card">
                 <h2>General Information</h2>
                 <div class="row">
@@ -77,10 +107,10 @@
                     <label>Work Description</label>
                     <textarea name="description" rows="4" placeholder="Detailed description..."></textarea>
                 </div>
-                
+
                 <div class="duration-section">
                     <label style="margin-bottom: 15px; display:block; border-bottom:1px solid #eee; padding-bottom:5px;">Estimated Working Time</label>
-                    
+
                     <div class="duration-row">
                         <span class="duration-label">Days:</span>
                         <div class="duration-options">

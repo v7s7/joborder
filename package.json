@@ -1,0 +1,22 @@
+{
+  "name": "joborder",
+  "version": "1.0.0",
+  "description": "Job Work Order Management System with LDAP Authentication",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "ldapjs": "^3.0.7"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
