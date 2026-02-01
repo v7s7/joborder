@@ -41,6 +41,7 @@
                         <span id="job-number-display" class="job-number">...</span>
                     </div>
                     <div class="user-section">
+                        <a href="/admin.html" class="admin-link" id="adminLink" style="display: none;">Manage Signatures</a>
                         <div id="userInfo" class="user-info" style="display: none;">
                             <span class="user-avatar" id="userAvatar">U</span>
                             <span class="user-name" id="userName">User</span>
@@ -187,6 +188,22 @@
                     <div class="form-group">
                         <label>Head of Section</label>
                         <input type="text" name="head_section" placeholder="Section head...">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Admin Signature (E13)</label>
+                        <select name="admin_signature" id="admin_signature">
+                            <option value="">-- Select Signature --</option>
+                        </select>
+                        <div class="signature-preview-small" id="adminSigPreview"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Staff Signature (N13)</label>
+                        <select name="staff_signature" id="staff_signature">
+                            <option value="">-- Select Signature --</option>
+                        </select>
+                        <div class="signature-preview-small" id="staffSigPreview"></div>
                     </div>
                 </div>
                 <div class="form-group">

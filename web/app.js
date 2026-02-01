@@ -126,8 +126,15 @@ function setLoggedIn(user) {
     userInfo.style.display = 'flex';
     loginTrigger.style.display = 'none';
 
+    // Show admin link
+    const adminLink = document.getElementById('adminLink');
+    if (adminLink) adminLink.style.display = 'inline-block';
+
     // Enable form
     jobForm.classList.remove('form-disabled');
+
+    // Load signatures for dropdowns
+    loadSignatures();
 }
 
 /**
@@ -139,6 +146,10 @@ function setLoggedOut() {
     // Show/hide elements
     userInfo.style.display = 'none';
     loginTrigger.style.display = 'block';
+
+    // Hide admin link
+    const adminLink = document.getElementById('adminLink');
+    if (adminLink) adminLink.style.display = 'none';
 
     // Disable form
     jobForm.classList.add('form-disabled');
@@ -173,6 +184,66 @@ function showLoginError(message) {
  */
 function hideLoginError() {
     loginError.style.display = 'none';
+}
+
+// =============================================================================
+// SIGNATURE FUNCTIONS
+// =============================================================================
+
+let signaturesData = [];
+
+/**
+ * Load available signatures for dropdowns
+ */
+async function loadSignatures() {
+    try {
+        const response = await fetch('/api/signatures', {
+            credentials: 'include'
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        signaturesData = data.signatures || [];
+
+        // Populate both dropdowns
+        const adminSelect = document.getElementById('admin_signature');
+        const staffSelect = document.getElementById('staff_signature');
+
+        if (adminSelect && staffSelect) {
+            const optionsHtml = signaturesData.map(sig =>
+                `<option value="${sig.userId}" data-url="${sig.signatureUrl}">${sig.name}</option>`
+            ).join('');
+
+            adminSelect.innerHTML = '<option value="">-- Select Signature --</option>' + optionsHtml;
+            staffSelect.innerHTML = '<option value="">-- Select Signature --</option>' + optionsHtml;
+
+            // Add change listeners for preview
+            adminSelect.addEventListener('change', () => updateSignaturePreview('admin'));
+            staffSelect.addEventListener('change', () => updateSignaturePreview('staff'));
+        }
+    } catch (error) {
+        console.error('Error loading signatures:', error);
+    }
+}
+
+/**
+ * Update signature preview when selection changes
+ */
+function updateSignaturePreview(type) {
+    const select = document.getElementById(`${type}_signature`);
+    const preview = document.getElementById(`${type}SigPreview`);
+
+    if (!select || !preview) return;
+
+    const selectedOption = select.options[select.selectedIndex];
+    const url = selectedOption?.dataset?.url;
+
+    if (url) {
+        preview.innerHTML = `<img src="${url}" alt="Signature preview">`;
+    } else {
+        preview.innerHTML = '';
+    }
 }
 
 // =============================================================================
@@ -258,6 +329,12 @@ function resetForm() {
     document.getElementById('main_date').value = today;
     document.getElementById('start_date').value = today;
     document.getElementById('end_date').value = today;
+
+    // Clear signature previews
+    const adminPreview = document.getElementById('adminSigPreview');
+    const staffPreview = document.getElementById('staffSigPreview');
+    if (adminPreview) adminPreview.innerHTML = '';
+    if (staffPreview) staffPreview.innerHTML = '';
 }
 
 function clearDuration() {

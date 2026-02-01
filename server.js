@@ -8,15 +8,129 @@ const ldap = require('ldapjs');
 const path = require('path');
 const fs = require('fs');
 const ExcelJS = require('exceljs');
+const multer = require('multer');
+const nodemailer = require('nodemailer');
+const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // =============================================================================
+// DIRECTORIES AND FILE PATHS
+// =============================================================================
+
+const REPORTS_DIR = path.join(__dirname, 'Generated_Reports');
+const TEMPLATE_FILE = path.join(__dirname, 'Job work order.xlsx');
+const DATA_DIR = path.join(__dirname, 'data');
+const SIGNATURES_DIR = path.join(DATA_DIR, 'signatures');
+const DB_FILE = path.join(DATA_DIR, 'database.json');
+
+// Ensure directories exist
+[REPORTS_DIR, DATA_DIR, SIGNATURES_DIR].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// =============================================================================
+// DATABASE (JSON-based simple storage)
+// =============================================================================
+
+function loadDatabase() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    }
+  } catch (err) {
+    console.error('Error loading database:', err);
+  }
+  return { users: {}, invitations: {}, signatures: {} };
+}
+
+function saveDatabase(db) {
+  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+}
+
+let db = loadDatabase();
+
+// =============================================================================
+// FILE UPLOAD CONFIGURATION
+// =============================================================================
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, SIGNATURES_DIR);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${uuidv4()}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'image/png') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PNG files are allowed'));
+    }
+  }
+});
+
+// =============================================================================
+// EMAIL CONFIGURATION
+// =============================================================================
+
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: process.env.SMTP_SECURE === 'true',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
+});
+
+async function sendSignatureInviteEmail(email, name, token) {
+  const appUrl = process.env.APP_URL || `http://localhost:${PORT}`;
+  const setupLink = `${appUrl}/signature-setup.html?token=${token}`;
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || 'Job Order System <noreply@example.com>',
+    to: email,
+    subject: 'Set Up Your Digital Signature - Job Order System',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1A73E8;">Digital Signature Setup</h2>
+        <p>Hello ${name},</p>
+        <p>You have been invited to set up your digital signature for the Job Order Management System.</p>
+        <p>Click the button below to upload or draw your signature:</p>
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${setupLink}"
+             style="background-color: #1A73E8; color: white; padding: 12px 24px;
+                    text-decoration: none; border-radius: 6px; display: inline-block;">
+            Set Up My Signature
+          </a>
+        </p>
+        <p style="color: #666; font-size: 14px;">
+          This link will expire in 7 days. If you did not request this, please ignore this email.
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="color: #999; font-size: 12px;">Job Order Management System</p>
+      </div>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
+// =============================================================================
 // MIDDLEWARE SETUP
 // =============================================================================
 
-// Parse CORS origins from env
 const corsOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
   : ['http://localhost:3000'];
@@ -27,10 +141,9 @@ app.use(cors({
 }));
 
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'change_this_long_random_string',
   resave: false,
@@ -38,7 +151,7 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 8 * 60 * 60 * 1000, // 8 hours
+    maxAge: 8 * 60 * 60 * 1000,
     sameSite: 'lax'
   }
 }));
@@ -49,23 +162,30 @@ app.use(session({
 
 const authGuard = (req, res, next) => {
   // Public routes
-  const publicPaths = ['/health', '/auth/login', '/auth/logout', '/auth/me'];
+  const publicPaths = [
+    '/health',
+    '/auth/login',
+    '/auth/logout',
+    '/auth/me',
+    '/api/signature/validate-token',
+    '/api/signature/setup'
+  ];
 
-  // Check if path starts with any public path
-  const isPublic = publicPaths.some(p => req.path === p || req.path.startsWith('/auth/'));
+  const isPublic = publicPaths.some(p => req.path === p) || req.path.startsWith('/auth/');
 
-  // Also allow static files for login page
+  // Allow static files and signature setup page
   const isStatic = req.path.endsWith('.html') ||
                    req.path.endsWith('.css') ||
                    req.path.endsWith('.js') ||
+                   req.path.endsWith('.png') ||
                    req.path === '/' ||
-                   req.path === '/login';
+                   req.path === '/login' ||
+                   req.path.startsWith('/signatures/');
 
   if (isPublic || isStatic) {
     return next();
   }
 
-  // Protected routes require authentication
   if (!req.session || !req.session.user) {
     return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
   }
@@ -73,10 +193,20 @@ const authGuard = (req, res, next) => {
   next();
 };
 
+// Admin guard middleware
+const adminGuard = (req, res, next) => {
+  // For now, all authenticated users can access admin features
+  // You can add role checking here later
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+};
+
 app.use(authGuard);
 
 // =============================================================================
-// LDAP AUTHENTICATION HELPERS
+// LDAP HELPERS
 // =============================================================================
 
 const LDAP_URL = process.env.LDAP_URL;
@@ -85,9 +215,6 @@ const LDAP_DEFAULT_UPN = process.env.LDAP_DEFAULT_UPN;
 const LDAP_ALT_UPN = process.env.LDAP_ALT_UPN;
 const LDAP_NETBIOS = process.env.LDAP_NETBIOS;
 
-/**
- * Attempt LDAP bind with given credentials
- */
 function ldapBind(bindDN, password) {
   return new Promise((resolve, reject) => {
     const client = ldap.createClient({
@@ -111,19 +238,12 @@ function ldapBind(bindDN, password) {
   });
 }
 
-/**
- * Search LDAP for user details after successful bind
- */
-function ldapSearch(client, username) {
+function ldapSearch(client, filter, attributes = ['mail', 'userPrincipalName', 'displayName', 'sAMAccountName', 'cn']) {
   return new Promise((resolve, reject) => {
-    // Build search filter - search by sAMAccountName or userPrincipalName
-    const searchUsername = username.includes('@') ? username.split('@')[0] : username;
-    const filter = `(|(sAMAccountName=${searchUsername})(userPrincipalName=${username}*))`;
-
     const opts = {
       filter: filter,
       scope: 'sub',
-      attributes: ['mail', 'userPrincipalName', 'displayName', 'sAMAccountName', 'cn']
+      attributes: attributes
     };
 
     client.search(LDAP_BASE_DN, opts, (err, searchRes) => {
@@ -132,18 +252,18 @@ function ldapSearch(client, username) {
         return;
       }
 
-      let userInfo = null;
+      const results = [];
 
       searchRes.on('searchEntry', (entry) => {
         const attrs = {};
         entry.pojo.attributes.forEach(attr => {
           attrs[attr.type] = attr.values[0];
         });
-        userInfo = {
+        results.push({
           email: attrs.mail || attrs.userPrincipalName || '',
-          name: attrs.displayName || attrs.cn || searchUsername,
-          username: attrs.sAMAccountName || searchUsername
-        };
+          name: attrs.displayName || attrs.cn || '',
+          username: attrs.sAMAccountName || ''
+        });
       });
 
       searchRes.on('error', (err) => {
@@ -151,23 +271,18 @@ function ldapSearch(client, username) {
       });
 
       searchRes.on('end', () => {
-        resolve(userInfo);
+        resolve(results);
       });
     });
   });
 }
 
-/**
- * Try multiple bind formats for authentication
- */
 async function authenticateUser(username, password) {
   const bindFormats = [];
 
   if (username.includes('@')) {
-    // Username already contains domain
     bindFormats.push(username);
   } else {
-    // Try different formats in order
     bindFormats.push(`${username}@${LDAP_DEFAULT_UPN}`);
     bindFormats.push(`${username}@${LDAP_ALT_UPN}`);
     bindFormats.push(`${LDAP_NETBIOS}\\${username}`);
@@ -178,76 +293,84 @@ async function authenticateUser(username, password) {
   for (const bindDN of bindFormats) {
     try {
       const client = await ldapBind(bindDN, password);
+      const searchUsername = username.includes('@') ? username.split('@')[0] : username;
+      const filter = `(|(sAMAccountName=${searchUsername})(userPrincipalName=${username}*))`;
+      const results = await ldapSearch(client, filter);
 
-      // Search for user details
-      let userInfo = await ldapSearch(client, username);
-
-      // If search didn't return info, use defaults
-      if (!userInfo) {
-        userInfo = {
-          email: username.includes('@') ? username : `${username}@${LDAP_DEFAULT_UPN}`,
-          name: username,
-          username: username.includes('@') ? username.split('@')[0] : username
-        };
-      }
+      let userInfo = results[0] || {
+        email: username.includes('@') ? username : `${username}@${LDAP_DEFAULT_UPN}`,
+        name: username,
+        username: username.includes('@') ? username.split('@')[0] : username
+      };
 
       client.destroy();
       return { success: true, user: userInfo };
     } catch (err) {
       lastError = err;
-      // Continue to next format
     }
   }
 
-  // All formats failed
-  return {
-    success: false,
-    error: lastError?.message || 'Invalid credentials'
-  };
+  return { success: false, error: lastError?.message || 'Invalid credentials' };
+}
+
+/**
+ * Search LDAP directory for users (requires service account or current user session)
+ */
+async function searchLdapDirectory(client, searchTerm) {
+  // Escape special LDAP characters
+  const escapedTerm = searchTerm.replace(/([\\*()|\x00])/g, '\\$1');
+
+  // Search by name, email, or username
+  const filter = `(&(objectClass=user)(objectCategory=person)(|(displayName=*${escapedTerm}*)(mail=*${escapedTerm}*)(sAMAccountName=*${escapedTerm}*)))`;
+
+  return await ldapSearch(client, filter);
 }
 
 // =============================================================================
 // AUTH ROUTES
 // =============================================================================
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Login
 app.post('/auth/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
-    return res.status(400).json({
-      ok: false,
-      error: 'Username and password are required'
-    });
+    return res.status(400).json({ ok: false, error: 'Username and password are required' });
   }
 
   try {
     const result = await authenticateUser(username, password);
 
     if (result.success) {
-      req.session.user = result.user;
-      return res.json({ ok: true, user: result.user });
+      // Check if user has signature
+      const userId = result.user.username.toLowerCase();
+      const signature = db.signatures[userId];
+
+      req.session.user = {
+        ...result.user,
+        hasSignature: !!signature && signature.status === 'approved'
+      };
+
+      // Store password hash for LDAP operations (encrypted in session)
+      req.session.ldapAuth = {
+        username,
+        // In production, use proper encryption
+        passwordHash: Buffer.from(password).toString('base64')
+      };
+
+      return res.json({ ok: true, user: req.session.user });
     } else {
-      return res.status(401).json({
-        ok: false,
-        error: 'Invalid credentials'
-      });
+      return res.status(401).json({ ok: false, error: 'Invalid credentials' });
     }
   } catch (err) {
     console.error('Login error:', err);
-    return res.status(500).json({
-      ok: false,
-      error: 'Authentication service error'
-    });
+    return res.status(500).json({ ok: false, error: 'Authentication service error' });
   }
 });
 
-// Logout
 app.post('/auth/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {
@@ -259,7 +382,6 @@ app.post('/auth/logout', (req, res) => {
   });
 });
 
-// Get current user
 app.get('/auth/me', (req, res) => {
   if (req.session && req.session.user) {
     return res.json({ user: req.session.user });
@@ -268,18 +390,261 @@ app.get('/auth/me', (req, res) => {
 });
 
 // =============================================================================
+// ADMIN ROUTES - LDAP DIRECTORY SEARCH
+// =============================================================================
+
+app.get('/api/admin/search-directory', adminGuard, async (req, res) => {
+  const { q } = req.query;
+
+  if (!q || q.length < 2) {
+    return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+  }
+
+  try {
+    let client;
+
+    // Try service account first, then current user's credentials
+    if (process.env.LDAP_SERVICE_USER && process.env.LDAP_SERVICE_PASS) {
+      client = await ldapBind(process.env.LDAP_SERVICE_USER, process.env.LDAP_SERVICE_PASS);
+    } else if (req.session.ldapAuth) {
+      const password = Buffer.from(req.session.ldapAuth.passwordHash, 'base64').toString();
+      const username = req.session.ldapAuth.username;
+      const bindDN = username.includes('@') ? username : `${username}@${LDAP_DEFAULT_UPN}`;
+      client = await ldapBind(bindDN, password);
+    } else {
+      return res.status(400).json({ error: 'LDAP credentials not available' });
+    }
+
+    const results = await searchLdapDirectory(client, q);
+    client.destroy();
+
+    // Add signature status to results
+    const enrichedResults = results.map(user => {
+      const userId = user.username.toLowerCase();
+      const sig = db.signatures[userId];
+      return {
+        ...user,
+        hasSignature: !!sig,
+        signatureStatus: sig?.status || null
+      };
+    });
+
+    res.json({ users: enrichedResults });
+  } catch (err) {
+    console.error('Directory search error:', err);
+    res.status(500).json({ error: 'Failed to search directory' });
+  }
+});
+
+// =============================================================================
+// ADMIN ROUTES - SIGNATURE INVITATIONS
+// =============================================================================
+
+app.post('/api/admin/invite-signature', adminGuard, async (req, res) => {
+  const { email, name, username } = req.body;
+
+  if (!email || !name) {
+    return res.status(400).json({ error: 'Email and name are required' });
+  }
+
+  try {
+    // Generate unique token
+    const token = crypto.randomBytes(32).toString('hex');
+    const userId = (username || email.split('@')[0]).toLowerCase();
+
+    // Store invitation
+    db.invitations[token] = {
+      email,
+      name,
+      username: userId,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+      invitedBy: req.session.user.username
+    };
+    saveDatabase(db);
+
+    // Send email
+    await sendSignatureInviteEmail(email, name, token);
+
+    res.json({ ok: true, message: 'Invitation sent successfully' });
+  } catch (err) {
+    console.error('Invite error:', err);
+    res.status(500).json({ error: 'Failed to send invitation' });
+  }
+});
+
+// =============================================================================
+// ADMIN ROUTES - SIGNATURE APPROVAL
+// =============================================================================
+
+app.get('/api/admin/pending-signatures', adminGuard, (req, res) => {
+  const pending = Object.entries(db.signatures)
+    .filter(([_, sig]) => sig.status === 'pending')
+    .map(([userId, sig]) => ({
+      userId,
+      ...sig,
+      signatureUrl: `/signatures/${sig.filename}`
+    }));
+
+  res.json({ signatures: pending });
+});
+
+app.post('/api/admin/approve-signature/:userId', adminGuard, (req, res) => {
+  const { userId } = req.params;
+  const sig = db.signatures[userId.toLowerCase()];
+
+  if (!sig) {
+    return res.status(404).json({ error: 'Signature not found' });
+  }
+
+  sig.status = 'approved';
+  sig.approvedAt = new Date().toISOString();
+  sig.approvedBy = req.session.user.username;
+  saveDatabase(db);
+
+  res.json({ ok: true, message: 'Signature approved' });
+});
+
+app.post('/api/admin/reject-signature/:userId', adminGuard, (req, res) => {
+  const { userId } = req.params;
+  const sig = db.signatures[userId.toLowerCase()];
+
+  if (!sig) {
+    return res.status(404).json({ error: 'Signature not found' });
+  }
+
+  // Delete the signature file
+  if (sig.filename) {
+    const filePath = path.join(SIGNATURES_DIR, sig.filename);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
+
+  delete db.signatures[userId.toLowerCase()];
+  saveDatabase(db);
+
+  res.json({ ok: true, message: 'Signature rejected and deleted' });
+});
+
+// =============================================================================
+// SIGNATURE SETUP ROUTES (PUBLIC - token-based auth)
+// =============================================================================
+
+app.get('/api/signature/validate-token', (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    return res.status(400).json({ valid: false, error: 'Token required' });
+  }
+
+  const invitation = db.invitations[token];
+
+  if (!invitation) {
+    return res.status(404).json({ valid: false, error: 'Invalid token' });
+  }
+
+  if (new Date(invitation.expiresAt) < new Date()) {
+    return res.status(410).json({ valid: false, error: 'Token expired' });
+  }
+
+  res.json({
+    valid: true,
+    name: invitation.name,
+    email: invitation.email
+  });
+});
+
+// Upload PNG signature
+app.post('/api/signature/setup', upload.single('signature'), (req, res) => {
+  const { token, signatureData } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: 'Token required' });
+  }
+
+  const invitation = db.invitations[token];
+
+  if (!invitation) {
+    return res.status(404).json({ error: 'Invalid token' });
+  }
+
+  if (new Date(invitation.expiresAt) < new Date()) {
+    return res.status(410).json({ error: 'Token expired' });
+  }
+
+  const userId = invitation.username;
+  let filename;
+
+  // Handle file upload
+  if (req.file) {
+    filename = req.file.filename;
+  }
+  // Handle drawn signature (base64 data URL)
+  else if (signatureData) {
+    const matches = signatureData.match(/^data:image\/png;base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ error: 'Invalid signature data format' });
+    }
+
+    filename = `${uuidv4()}.png`;
+    const buffer = Buffer.from(matches[1], 'base64');
+    fs.writeFileSync(path.join(SIGNATURES_DIR, filename), buffer);
+  }
+  else {
+    return res.status(400).json({ error: 'No signature provided' });
+  }
+
+  // Determine status
+  const autoApprove = process.env.SIGNATURE_AUTO_APPROVE === 'true';
+
+  // Store signature
+  db.signatures[userId] = {
+    name: invitation.name,
+    email: invitation.email,
+    filename,
+    status: autoApprove ? 'approved' : 'pending',
+    createdAt: new Date().toISOString(),
+    ...(autoApprove ? { approvedAt: new Date().toISOString(), approvedBy: 'auto' } : {})
+  };
+
+  // Remove used invitation
+  delete db.invitations[token];
+  saveDatabase(db);
+
+  res.json({
+    ok: true,
+    status: autoApprove ? 'approved' : 'pending',
+    message: autoApprove
+      ? 'Signature saved and approved!'
+      : 'Signature saved and pending approval.'
+  });
+});
+
+// =============================================================================
+// SIGNATURES LIST (for form selection)
+// =============================================================================
+
+app.get('/api/signatures', (req, res) => {
+  const approved = Object.entries(db.signatures)
+    .filter(([_, sig]) => sig.status === 'approved')
+    .map(([userId, sig]) => ({
+      userId,
+      name: sig.name,
+      email: sig.email,
+      signatureUrl: `/signatures/${sig.filename}`
+    }));
+
+  res.json({ signatures: approved });
+});
+
+// Serve signature images
+app.use('/signatures', express.static(SIGNATURES_DIR));
+
+// =============================================================================
 // JOB ORDER API ROUTES
 // =============================================================================
 
-const REPORTS_DIR = path.join(__dirname, 'Generated_Reports');
-const TEMPLATE_FILE = path.join(__dirname, 'Job work order.xlsx');
-
-// Ensure reports directory exists
-if (!fs.existsSync(REPORTS_DIR)) {
-  fs.mkdirSync(REPORTS_DIR, { recursive: true });
-}
-
-// Cell mappings (matching the original Python app)
 const JOB_NO_CELL = 'C3';
 const CELL_MAP = {
   engineer: 'E12',
@@ -302,20 +667,13 @@ const DURATION_MAPPING = {
   months: { '2': 'J9', '4': 'K9', '6': 'L9', '8': 'M9', '10': 'N9', '12': 'O9' },
   years: { '1': 'P9', '2': 'Q9', '3': 'R9', '4': 'S9', '5': 'T9' }
 };
-const TYPE_MAPPING = { Site: 'site', Office: 'office' };
-const TO_SECTION_MAPPING = {
-  'servies': 'servies',
-  'Design': 'Design',
-  'project': 'project',
-  'QS': 'QS',
-  'Mosque Maint.': 'Mosque Maint.',
-  'Investment Maint.': 'Investment Maint.',
-  'Cemetry': 'Cemetry',
-  'MEP': 'MEP',
-  'Others': 'Others'
+
+// Signature cells
+const SIGNATURE_CELLS = {
+  admin: 'E13',    // Admin/creator signature
+  staff: 'N13'     // Staff signature
 };
 
-// Get next job number
 function getNextJobNo() {
   try {
     const files = fs.readdirSync(REPORTS_DIR);
@@ -334,7 +692,6 @@ function getNextJobNo() {
   }
 }
 
-// Format date from YYYY-MM-DD to DD/MM/YYYY
 function formatDate(dateStr) {
   if (!dateStr) return '';
   const parts = dateStr.split('-');
@@ -342,19 +699,16 @@ function formatDate(dateStr) {
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
-// API: Get next job number
 app.get('/api/get-job-no', (req, res) => {
   const jobNo = getNextJobNo();
   res.json({ job_no: jobNo });
 });
 
-// API: Generate report
 app.post('/api/generate', async (req, res) => {
   try {
     const data = req.body;
     const jobNo = getNextJobNo();
 
-    // Load template
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(TEMPLATE_FILE);
     const ws = workbook.getWorksheet(1);
@@ -375,7 +729,6 @@ app.post('/api/generate', async (req, res) => {
         const formattedDate = formatDate(data[field]);
         const currentCell = ws.getCell(cell);
 
-        // For end_date, it's a labeled field
         if (field === 'end_date') {
           const existing = currentCell.value || '';
           const label = typeof existing === 'string' ? existing.split(':')[0] + ':' : '';
@@ -386,7 +739,7 @@ app.post('/api/generate', async (req, res) => {
       }
     }
 
-    // Write labeled fields (append to existing label)
+    // Write labeled fields
     for (const [field, cell] of Object.entries(LABELED_FIELDS)) {
       if (data[field]) {
         const currentCell = ws.getCell(cell);
@@ -408,8 +761,45 @@ app.post('/api/generate', async (req, res) => {
           cell.fill = {
             type: 'pattern',
             pattern: 'solid',
-            fgColor: { argb: 'FFFFFF00' } // Yellow
+            fgColor: { argb: 'FFFFFF00' }
           };
+        }
+      }
+    }
+
+    // Add signatures as images
+    if (data.admin_signature) {
+      const sig = db.signatures[data.admin_signature.toLowerCase()];
+      if (sig && sig.status === 'approved') {
+        const imagePath = path.join(SIGNATURES_DIR, sig.filename);
+        if (fs.existsSync(imagePath)) {
+          const imageId = workbook.addImage({
+            filename: imagePath,
+            extension: 'png'
+          });
+          // E13 position - adjust based on your template
+          ws.addImage(imageId, {
+            tl: { col: 4, row: 12 },  // E13 (0-indexed: col 4 = E, row 12 = 13)
+            ext: { width: 100, height: 40 }
+          });
+        }
+      }
+    }
+
+    if (data.staff_signature) {
+      const sig = db.signatures[data.staff_signature.toLowerCase()];
+      if (sig && sig.status === 'approved') {
+        const imagePath = path.join(SIGNATURES_DIR, sig.filename);
+        if (fs.existsSync(imagePath)) {
+          const imageId = workbook.addImage({
+            filename: imagePath,
+            extension: 'png'
+          });
+          // N13 position
+          ws.addImage(imageId, {
+            tl: { col: 13, row: 12 },  // N13 (0-indexed: col 13 = N, row 12 = 13)
+            ext: { width: 100, height: 40 }
+          });
         }
       }
     }
@@ -438,17 +828,14 @@ app.post('/api/generate', async (req, res) => {
 // STATIC FILES
 // =============================================================================
 
-// Serve login page
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'web', 'login.html'));
 });
 
-// Serve main app (index)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'web', 'index.html'));
 });
 
-// Serve static files from web directory
 app.use(express.static(path.join(__dirname, 'web')));
 
 // =============================================================================

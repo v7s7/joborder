@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signature Setup - Job Order System</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .setup-container {
+            max-width: 500px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .setup-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 30px;
+        }
+
+        .setup-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .setup-header h1 {
+            font-size: 24px;
+            margin: 0 0 8px;
+        }
+
+        .setup-header p {
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .welcome-name {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 25px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            margin-bottom: -1px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Upload section */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 20px;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary);
+            background: #F8F9FA;
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--primary);
+            background: #E8F0FE;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .upload-zone p {
+            margin: 0;
+            color: var(--text-muted);
+        }
+
+        .upload-zone input[type="file"] {
+            display: none;
+        }
+
+        .upload-preview {
+            display: none;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .upload-preview img {
+            max-width: 100%;
+            max-height: 150px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #f5f5f5;
+        }
+
+        .upload-preview .remove-btn {
+            margin-top: 10px;
+        }
+
+        /* Canvas section */
+        .canvas-container {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            background: white;
+        }
+
+        #signatureCanvas {
+            display: block;
+            width: 100%;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        .canvas-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .canvas-actions button {
+            flex: 1;
+        }
+
+        /* Messages */
+        .info-box {
+            background: #E8F0FE;
+            color: #1A73E8;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .error-box {
+            background: #FFEBEE;
+            color: #C62828;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-box {
+            background: #E8F5E9;
+            color: #2E7D32;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .success-box h3 {
+            margin: 0 0 10px;
+        }
+
+        /* Loading state */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* Invalid token */
+        .invalid-token {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .invalid-token h2 {
+            color: #C62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p style="margin-top: 15px; color: var(--text-muted);">Processing...</p>
+    </div>
+
+    <div class="setup-container">
+        <div class="setup-card" id="setupCard">
+            <!-- Content loaded dynamically -->
+        </div>
+    </div>
+
+    <script>
+        const token = new URLSearchParams(window.location.search).get('token');
+        let userName = '';
+        let userEmail = '';
+
+        // DOM elements
+        const setupCard = document.getElementById('setupCard');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!token) {
+                showInvalidToken('No token provided');
+                return;
+            }
+            validateToken();
+        });
+
+        async function validateToken() {
+            showLoading(true);
+            try {
+                const res = await fetch(`/api/signature/validate-token?token=${token}`);
+                const data = await res.json();
+
+                if (data.valid) {
+                    userName = data.name;
+                    userEmail = data.email;
+                    showSetupForm();
+                } else {
+                    showInvalidToken(data.error || 'Invalid token');
+                }
+            } catch (err) {
+                showInvalidToken('Failed to validate token');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showInvalidToken(message) {
+            setupCard.innerHTML = `
+                <div class="invalid-token">
+                    <h2>Invalid Link</h2>
+                    <p>${message}</p>
+                    <p style="color: var(--text-muted); margin-top: 20px;">
+                        Please contact your administrator for a new invitation.
+                    </p>
+                </div>
+            `;
+        }
+
+        function showSetupForm() {
+            setupCard.innerHTML = `
+                <div class="setup-header">
+                    <h1>Set Up Your Signature</h1>
+                    <p>Welcome, <span class="welcome-name">${userName}</span></p>
+                </div>
+
+                <div class="info-box">
+                    Upload a PNG image of your signature or draw it below.
+                    For best results, use a transparent background.
+                </div>
+
+                <div class="error-box" id="errorBox"></div>
+
+                <div class="tabs">
+                    <button class="tab active" data-tab="upload">Upload Image</button>
+                    <button class="tab" data-tab="draw">Draw Signature</button>
+                </div>
+
+                <!-- Upload Tab -->
+                <div class="tab-content active" id="tab-upload">
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-icon">&#128206;</div>
+                        <p><strong>Click to upload</strong> or drag and drop</p>
+                        <p style="font-size: 12px; margin-top: 5px;">PNG only, max 2MB</p>
+                        <input type="file" id="fileInput" accept="image/png">
+                    </div>
+                    <div class="upload-preview" id="uploadPreview">
+                        <img id="previewImage" src="" alt="Signature preview">
+                        <button type="button" class="btn-secondary remove-btn" onclick="removeUpload()">Remove</button>
+                    </div>
+                    <button class="btn-primary btn-full" id="uploadSubmitBtn" onclick="submitUpload()" disabled>
+                        Submit Signature
+                    </button>
+                </div>
+
+                <!-- Draw Tab -->
+                <div class="tab-content" id="tab-draw">
+                    <div class="canvas-container">
+                        <canvas id="signatureCanvas" width="440" height="200"></canvas>
+                    </div>
+                    <div class="canvas-actions">
+                        <button class="btn-secondary" onclick="clearCanvas()">Clear</button>
+                        <button class="btn-primary" id="drawSubmitBtn" onclick="submitDrawing()">
+                            Submit Signature
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            initTabs();
+            initUpload();
+            initCanvas();
+        }
+
+        function showSuccess(message, status) {
+            setupCard.innerHTML = `
+                <div class="success-box">
+                    <h3>Signature Submitted!</h3>
+                    <p>${message}</p>
+                    ${status === 'pending' ? '<p style="margin-top: 15px; color: #666;">Your signature is pending approval by an administrator.</p>' : ''}
+                    <p style="margin-top: 20px; color: #666;">You can close this page now.</p>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('errorBox');
+            errorBox.textContent = message;
+            errorBox.style.display = 'block';
+        }
+
+        function hideError() {
+            const errorBox = document.getElementById('errorBox');
+            if (errorBox) errorBox.style.display = 'none';
+        }
+
+        function showLoading(show) {
+            loadingOverlay.classList.toggle('active', show);
+        }
+
+        // Tab functionality
+        function initTabs() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+                    hideError();
+                });
+            });
+        }
+
+        // Upload functionality
+        let uploadedFile = null;
+
+        function initUpload() {
+            const uploadZone = document.getElementById('uploadZone');
+            const fileInput = document.getElementById('fileInput');
+
+            uploadZone.addEventListener('click', () => fileInput.click());
+
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.classList.add('dragover');
+            });
+
+            uploadZone.addEventListener('dragleave', () => {
+                uploadZone.classList.remove('dragover');
+            });
+
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                handleFile(file);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFile(e.target.files[0]);
+            });
+        }
+
+        function handleFile(file) {
+            hideError();
+
+            if (!file) return;
+
+            if (file.type !== 'image/png') {
+                showError('Only PNG files are allowed');
+                return;
+            }
+
+            if (file.size > 2 * 1024 * 1024) {
+                showError('File size must be less than 2MB');
+                return;
+            }
+
+            uploadedFile = file;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('previewImage').src = e.target.result;
+                document.getElementById('uploadZone').style.display = 'none';
+                document.getElementById('uploadPreview').style.display = 'block';
+                document.getElementById('uploadSubmitBtn').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeUpload() {
+            uploadedFile = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('uploadZone').style.display = 'block';
+            document.getElementById('uploadPreview').style.display = 'none';
+            document.getElementById('uploadSubmitBtn').disabled = true;
+        }
+
+        async function submitUpload() {
+            if (!uploadedFile) return;
+
+            showLoading(true);
+            hideError();
+
+            const formData = new FormData();
+            formData.append('token', token);
+            formData.append('signature', uploadedFile);
+
+            try {
+                const res = await fetch('/api/signature/setup', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                if (data.ok) {
+                    showSuccess(data.message, data.status);
+                } else {
+                    showError(data.error || 'Failed to submit signature');
+                }
+            } catch (err) {
+                showError('Network error. Please try again.');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Canvas drawing functionality
+        let canvas, ctx;
+        let isDrawing = false;
+        let lastX = 0, lastY = 0;
+
+        function initCanvas() {
+            canvas = document.getElementById('signatureCanvas');
+            ctx = canvas.getContext('2d');
+
+            // Set up canvas
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // Clear with white background
+            clearCanvas();
+
+            // Mouse events
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+
+            // Touch events
+            canvas.addEventListener('touchstart', handleTouchStart);
+            canvas.addEventListener('touchmove', handleTouchMove);
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            [lastX, lastY] = getCoords(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+
+            const [x, y] = getCoords(e);
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+
+            [lastX, lastY] = [x, y];
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            startDrawing(mouseEvent);
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            draw(mouseEvent);
+        }
+
+        function getCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return [
+                (e.clientX - rect.left) * scaleX,
+                (e.clientY - rect.top) * scaleY
+            ];
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function isCanvasEmpty() {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Check if any pixel is not white
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i] !== 255 || data[i + 1] !== 255 || data[i + 2] !== 255) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        async function submitDrawing() {
+            hideError();
+
+            if (isCanvasEmpty()) {
+                showError('Please draw your signature first');
+                return;
+            }
+
+            showLoading(true);
+
+            // Convert canvas to PNG with transparency
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Get image data and make white pixels transparent
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255) {
+                    data[i + 3] = 0; // Make white transparent
+                }
+            }
+
+            tempCtx.putImageData(imageData, 0, 0);
+            const signatureData = tempCanvas.toDataURL('image/png');
+
+            try {
+                const res = await fetch('/api/signature/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, signatureData })
+                });
+
+                const data = await res.json();
+
+                if (data.ok) {
+                    showSuccess(data.message, data.status);
+                } else {
+                    showError(data.error || 'Failed to submit signature');
+                }
+            } catch (err) {
+                showError('Network error. Please try again.');
+            } finally {
+                showLoading(false);
+            }
+        }
+    </script>
+</body>
+</html>
