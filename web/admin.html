@@ -3,348 +3,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Signature Management</title>
+    <title>Signature Management - Job Order Management</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        .admin-container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .admin-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-
-        .admin-header h1 {
-            margin: 0;
-        }
-
-        .admin-nav {
-            display: flex;
-            gap: 10px;
-        }
-
-        .admin-nav a {
-            color: var(--primary);
-            text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            transition: background 0.2s;
-        }
-
-        .admin-nav a:hover {
-            background: #E8F0FE;
-        }
-
-        /* Tabs */
-        .admin-tabs {
-            display: flex;
-            border-bottom: 2px solid var(--border);
-            margin-bottom: 25px;
-        }
-
-        .admin-tab {
-            padding: 12px 24px;
-            cursor: pointer;
-            border: none;
-            background: none;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-muted);
-            transition: all 0.2s;
-            position: relative;
-        }
-
-        .admin-tab.active {
-            color: var(--primary);
-        }
-
-        .admin-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: var(--primary);
-        }
-
-        .admin-tab .badge {
-            background: #EA4335;
-            color: white;
-            font-size: 11px;
-            padding: 2px 6px;
-            border-radius: 10px;
-            margin-left: 6px;
-        }
-
-        .tab-panel {
-            display: none;
-        }
-
-        .tab-panel.active {
-            display: block;
-        }
-
-        /* Search section */
-        .search-section {
-            margin-bottom: 30px;
-        }
-
-        .search-box {
-            display: flex;
-            gap: 10px;
-        }
-
-        .search-box input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .search-box button {
-            padding: 12px 24px;
-        }
-
-        /* Results */
-        .results-list {
-            margin-top: 20px;
-        }
-
-        .result-item {
-            display: flex;
-            align-items: center;
-            padding: 15px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 10px;
-            background: white;
-        }
-
-        .result-item:hover {
-            border-color: var(--primary);
-        }
-
-        .result-avatar {
-            width: 40px;
-            height: 40px;
-            background: var(--primary);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin-right: 15px;
-        }
-
-        .result-info {
-            flex: 1;
-        }
-
-        .result-name {
-            font-weight: 600;
-            margin-bottom: 3px;
-        }
-
-        .result-email {
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-
-        .result-status {
-            margin-right: 15px;
-        }
-
-        .status-badge {
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .status-badge.approved {
-            background: #E8F5E9;
-            color: #2E7D32;
-        }
-
-        .status-badge.pending {
-            background: #FFF3E0;
-            color: #E65100;
-        }
-
-        .status-badge.none {
-            background: #F5F5F5;
-            color: #757575;
-        }
-
-        /* Pending signatures */
-        .signature-card {
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 15px;
-            background: white;
-        }
-
-        .signature-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 15px;
-        }
-
-        .signature-preview {
-            background: #F5F5F5;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-
-        .signature-preview img {
-            max-width: 200px;
-            max-height: 80px;
-        }
-
-        .signature-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-approve {
-            background: #0F9D58;
-            color: white;
-        }
-
-        .btn-approve:hover {
-            background: #0B8043;
-        }
-
-        .btn-reject {
-            background: #EA4335;
-            color: white;
-        }
-
-        .btn-reject:hover {
-            background: #D32F2F;
-        }
-
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-muted);
-        }
-
-        .empty-state h3 {
-            margin-bottom: 10px;
-            color: var(--text-main);
-        }
-
-        /* Alerts */
-        .alert {
-            padding: 12px 16px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .alert.success {
-            background: #E8F5E9;
-            color: #2E7D32;
-            display: block;
-        }
-
-        .alert.error {
-            background: #FFEBEE;
-            color: #C62828;
-            display: block;
-        }
-    </style>
 </head>
 <body>
-    <div class="admin-container">
-        <div class="admin-header">
-            <h1>Signature Management</h1>
-            <div class="admin-nav">
-                <a href="/">Back to Job Orders</a>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/dashboard.html" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">JO</div>
+                    <div>
+                        <div class="sidebar-logo-text">Job Orders</div>
+                        <div class="sidebar-logo-subtitle">Management System</div>
+                    </div>
+                </a>
             </div>
-        </div>
 
-        <div id="alert" class="alert"></div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main Menu</div>
+                    <a href="/dashboard.html" class="nav-item">
+                        <span class="nav-item-icon">&#128200;</span>
+                        Dashboard
+                    </a>
+                    <a href="/" class="nav-item">
+                        <span class="nav-item-icon">&#128221;</span>
+                        New Job Order
+                    </a>
+                    <a href="/reports.html" class="nav-item">
+                        <span class="nav-item-icon">&#128202;</span>
+                        Reports
+                    </a>
+                </div>
 
-        <div class="admin-tabs">
-            <button class="admin-tab active" data-tab="invite">Invite Staff</button>
-            <button class="admin-tab" data-tab="pending">
-                Pending Approval
-                <span class="badge" id="pendingCount" style="display: none;">0</span>
-            </button>
-            <button class="admin-tab" data-tab="all">All Signatures</button>
-        </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Administration</div>
+                    <a href="/admin.html" class="nav-item active">
+                        <span class="nav-item-icon">&#9999;</span>
+                        Signatures
+                        <span class="nav-item-badge" id="pendingBadgeSidebar" style="display: none;">0</span>
+                    </a>
+                </div>
+            </nav>
 
-        <!-- Invite Tab -->
-        <div class="tab-panel active" id="panel-invite">
-            <div class="card">
-                <h2>Search Directory</h2>
-                <p style="color: var(--text-muted); margin-bottom: 20px;">
-                    Search for staff in Active Directory to invite them to set up their signature.
-                </p>
+            <div class="sidebar-footer">
+                <div class="sidebar-user" id="sidebarUser">
+                    <div class="sidebar-user-avatar" id="sidebarAvatar">U</div>
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name" id="sidebarUserName">User</div>
+                        <div class="sidebar-user-role" id="sidebarUserRole">Administrator</div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-full mt-2" id="logoutBtn" style="justify-content: flex-start; gap: 12px;">
+                    <span>&#128682;</span> Logout
+                </button>
+            </div>
+        </aside>
 
-                <div class="search-section">
-                    <div class="search-box">
-                        <input type="text" id="searchInput" placeholder="Search by name or email..." autocomplete="off">
-                        <button class="btn-primary" onclick="searchDirectory()">Search</button>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="icon-btn mobile-menu-toggle" id="menuToggle" style="display: none;">
+                        &#9776;
+                    </button>
+                    <div>
+                        <h1 class="page-title">Signature Management</h1>
+                        <div class="breadcrumb">
+                            <span>Home</span>
+                            <span class="breadcrumb-separator">/</span>
+                            <span>Administration</span>
+                            <span class="breadcrumb-separator">/</span>
+                            <span>Signatures</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="status-indicator ready">
+                        <span class="status-dot"></span>
+                        <span>Admin Mode</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content">
+                <!-- Stats Grid -->
+                <div class="stats-grid mb-6" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="stat-card" style="--stat-color: var(--success);">
+                        <div class="stat-card-icon success">&#9989;</div>
+                        <div class="stat-card-content">
+                            <div class="stat-card-title">Approved Signatures</div>
+                            <div class="stat-card-value" id="statApproved">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="--stat-color: var(--warning);">
+                        <div class="stat-card-icon warning">&#9200;</div>
+                        <div class="stat-card-content">
+                            <div class="stat-card-title">Pending Approval</div>
+                            <div class="stat-card-value" id="statPending">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="--stat-color: var(--info);">
+                        <div class="stat-card-icon info">&#128231;</div>
+                        <div class="stat-card-content">
+                            <div class="stat-card-title">Invitations Sent</div>
+                            <div class="stat-card-value" id="statInvitations">0</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="results-list" id="searchResults"></div>
+                <!-- Main Content Card -->
+                <div class="card">
+                    <!-- Tabs -->
+                    <div class="tabs" style="padding: 0 24px; margin-bottom: 0; border-bottom: 2px solid var(--border-light);">
+                        <button class="tab active" data-tab="invite">
+                            <span>&#128269;</span> Invite Staff
+                        </button>
+                        <button class="tab" data-tab="pending">
+                            <span>&#9200;</span> Pending Approval
+                            <span class="tab-badge" id="pendingBadge" style="display: none;">0</span>
+                        </button>
+                        <button class="tab" data-tab="all">
+                            <span>&#9989;</span> All Signatures
+                        </button>
+                    </div>
+
+                    <!-- Tab Panels -->
+                    <div class="card-body">
+                        <!-- Invite Tab -->
+                        <div class="tab-panel active" id="panel-invite">
+                            <div class="mb-6">
+                                <h3 class="font-semibold mb-2">Search Directory</h3>
+                                <p class="text-secondary text-sm">Search for staff members in Active Directory to invite them to set up their digital signature.</p>
+                            </div>
+
+                            <div class="search-box mb-6">
+                                <input type="text" class="form-input" id="searchInput" placeholder="Search by name or email (min. 2 characters)..." autocomplete="off">
+                                <button class="btn btn-primary" onclick="searchDirectory()">
+                                    <span>&#128269;</span> Search
+                                </button>
+                            </div>
+
+                            <div id="searchResults">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">&#128269;</div>
+                                    <div class="empty-state-title">Search Directory</div>
+                                    <div class="empty-state-description">Enter a name or email address to search for staff members in Active Directory.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pending Tab -->
+                        <div class="tab-panel" id="panel-pending">
+                            <div id="pendingList">
+                                <div class="empty-state">
+                                    <div class="spinner"></div>
+                                    <p class="loading-text mt-4">Loading pending signatures...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- All Signatures Tab -->
+                        <div class="tab-panel" id="panel-all">
+                            <div id="allSignatures">
+                                <div class="empty-state">
+                                    <div class="spinner"></div>
+                                    <p class="loading-text mt-4">Loading signatures...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <!-- Pending Tab -->
-        <div class="tab-panel" id="panel-pending">
-            <div id="pendingList"></div>
-        </div>
-
-        <!-- All Signatures Tab -->
-        <div class="tab-panel" id="panel-all">
-            <div id="allSignatures"></div>
-        </div>
+        </main>
     </div>
 
-    <script>
-        // Tab functionality
-        document.querySelectorAll('.admin-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-                tab.classList.add('active');
-                document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
 
-                if (tab.dataset.tab === 'pending') loadPending();
-                if (tab.dataset.tab === 'all') loadAllSignatures();
+    <script>
+        // =============================================================================
+        // STATE
+        // =============================================================================
+        let currentUser = null;
+
+        // =============================================================================
+        // DOM ELEMENTS
+        // =============================================================================
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        // =============================================================================
+        // INITIALIZATION
+        // =============================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            initTabs();
+
+            // Event listeners
+            logoutBtn.addEventListener('click', handleLogout);
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchDirectory();
             });
         });
 
-        // Search with Enter key
-        document.getElementById('searchInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') searchDirectory();
-        });
+        // =============================================================================
+        // TABS
+        // =============================================================================
+        function initTabs() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
 
-        // Initial load
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuth();
-            loadPendingCount();
-        });
+                    if (tab.dataset.tab === 'pending') loadPending();
+                    if (tab.dataset.tab === 'all') loadAllSignatures();
+                });
+            });
+        }
 
+        // =============================================================================
+        // AUTH
+        // =============================================================================
         async function checkAuth() {
             try {
                 const res = await fetch('/auth/me', { credentials: 'include' });
@@ -355,31 +239,96 @@
 
                 const data = await res.json();
                 if (!data.user || !data.user.isAdmin) {
-                    alert('Access denied. Admin privileges required.');
-                    window.location.href = '/';
+                    showToast('Access denied. Admin privileges required.', 'error');
+                    setTimeout(() => window.location.href = '/', 2000);
                     return;
                 }
+
+                currentUser = data.user;
+                updateUserUI();
+                loadStats();
+                loadPendingCount();
             } catch (err) {
                 window.location.href = '/';
             }
         }
 
-        function showAlert(message, type) {
-            const alert = document.getElementById('alert');
-            alert.textContent = message;
-            alert.className = `alert ${type}`;
-            setTimeout(() => { alert.className = 'alert'; }, 5000);
+        async function handleLogout() {
+            try {
+                await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            window.location.href = '/';
         }
 
+        function updateUserUI() {
+            document.getElementById('sidebarAvatar').textContent = (currentUser.name || currentUser.username).charAt(0).toUpperCase();
+            document.getElementById('sidebarUserName').textContent = currentUser.name || currentUser.username;
+        }
+
+        // =============================================================================
+        // STATS
+        // =============================================================================
+        async function loadStats() {
+            try {
+                // Load approved signatures count
+                const sigRes = await fetch('/api/signatures', { credentials: 'include' });
+                const sigData = await sigRes.json();
+                document.getElementById('statApproved').textContent = sigData.signatures?.length || 0;
+
+                // Load pending count
+                const pendRes = await fetch('/api/admin/pending-signatures', { credentials: 'include' });
+                const pendData = await pendRes.json();
+                document.getElementById('statPending').textContent = pendData.signatures?.length || 0;
+
+                // Invitations (estimate based on signatures)
+                document.getElementById('statInvitations').textContent = (sigData.signatures?.length || 0) + (pendData.signatures?.length || 0);
+            } catch (error) {
+                console.error('Failed to load stats');
+            }
+        }
+
+        async function loadPendingCount() {
+            try {
+                const res = await fetch('/api/admin/pending-signatures', { credentials: 'include' });
+                const data = await res.json();
+                const count = data.signatures?.length || 0;
+
+                const badge = document.getElementById('pendingBadge');
+                const sidebarBadge = document.getElementById('pendingBadgeSidebar');
+
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.style.display = 'inline';
+                    sidebarBadge.textContent = count;
+                    sidebarBadge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                    sidebarBadge.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Failed to load pending count');
+            }
+        }
+
+        // =============================================================================
+        // DIRECTORY SEARCH
+        // =============================================================================
         async function searchDirectory() {
             const query = document.getElementById('searchInput').value.trim();
             if (query.length < 2) {
-                showAlert('Please enter at least 2 characters', 'error');
+                showToast('Please enter at least 2 characters', 'warning');
                 return;
             }
 
             const resultsDiv = document.getElementById('searchResults');
-            resultsDiv.innerHTML = '<p style="color: var(--text-muted);">Searching...</p>';
+            resultsDiv.innerHTML = `
+                <div class="empty-state" style="padding: 40px;">
+                    <div class="spinner"></div>
+                    <p class="loading-text mt-4">Searching directory...</p>
+                </div>
+            `;
 
             try {
                 const res = await fetch(`/api/admin/search-directory?q=${encodeURIComponent(query)}`, {
@@ -391,35 +340,46 @@
                 const data = await res.json();
 
                 if (data.users.length === 0) {
-                    resultsDiv.innerHTML = '<div class="empty-state"><h3>No results found</h3><p>Try a different search term</p></div>';
+                    resultsDiv.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">&#128528;</div>
+                            <div class="empty-state-title">No Results Found</div>
+                            <div class="empty-state-description">No users found matching "${query}". Try a different search term.</div>
+                        </div>
+                    `;
                     return;
                 }
 
                 resultsDiv.innerHTML = data.users.map(user => `
-                    <div class="result-item">
-                        <div class="result-avatar">${(user.name || 'U').charAt(0).toUpperCase()}</div>
-                        <div class="result-info">
-                            <div class="result-name">${user.name || user.username}</div>
-                            <div class="result-email">${user.email}</div>
+                    <div class="list-item">
+                        <div class="list-item-avatar">
+                            <div class="avatar">${(user.name || 'U').charAt(0).toUpperCase()}</div>
                         </div>
-                        <div class="result-status">
+                        <div class="list-item-content">
+                            <div class="list-item-title">${user.name || user.username}</div>
+                            <div class="list-item-subtitle">${user.email}</div>
+                        </div>
+                        <div class="list-item-actions">
                             ${user.signatureStatus === 'approved'
-                                ? '<span class="status-badge approved">Has Signature</span>'
+                                ? '<span class="badge badge-success">Has Signature</span>'
                                 : user.signatureStatus === 'pending'
-                                    ? '<span class="status-badge pending">Pending</span>'
-                                    : '<span class="status-badge none">No Signature</span>'
+                                    ? '<span class="badge badge-warning">Pending</span>'
+                                    : `<button class="btn btn-primary btn-sm" onclick="inviteUser('${user.email}', '${user.name}', '${user.username}')">
+                                        <span>&#128231;</span> Send Invite
+                                       </button>`
                             }
                         </div>
-                        ${!user.hasSignature ? `
-                            <button class="btn-primary" onclick="inviteUser('${user.email}', '${user.name}', '${user.username}')">
-                                Send Invite
-                            </button>
-                        ` : ''}
                     </div>
                 `).join('');
 
             } catch (err) {
-                resultsDiv.innerHTML = '<div class="empty-state error"><h3>Search failed</h3><p>Please try again</p></div>';
+                resultsDiv.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#10060;</div>
+                        <div class="empty-state-title">Search Failed</div>
+                        <div class="empty-state-description">Unable to search the directory. Please try again.</div>
+                    </div>
+                `;
             }
         }
 
@@ -435,67 +395,81 @@
                 const data = await res.json();
 
                 if (data.ok) {
-                    showAlert(`Invitation sent to ${email}`, 'success');
+                    showToast(`Invitation sent to ${email}`, 'success');
                     searchDirectory(); // Refresh results
                 } else {
-                    showAlert(data.error || 'Failed to send invitation', 'error');
+                    showToast(data.error || 'Failed to send invitation', 'error');
                 }
             } catch (err) {
-                showAlert('Failed to send invitation', 'error');
+                showToast('Failed to send invitation', 'error');
             }
         }
 
-        async function loadPendingCount() {
-            try {
-                const res = await fetch('/api/admin/pending-signatures', { credentials: 'include' });
-                const data = await res.json();
-                const count = data.signatures.length;
-                const badge = document.getElementById('pendingCount');
-                if (count > 0) {
-                    badge.textContent = count;
-                    badge.style.display = 'inline';
-                } else {
-                    badge.style.display = 'none';
-                }
-            } catch (err) {
-                console.error('Failed to load pending count');
-            }
-        }
-
+        // =============================================================================
+        // PENDING SIGNATURES
+        // =============================================================================
         async function loadPending() {
             const listDiv = document.getElementById('pendingList');
-            listDiv.innerHTML = '<p style="color: var(--text-muted);">Loading...</p>';
+            listDiv.innerHTML = `
+                <div class="empty-state" style="padding: 40px;">
+                    <div class="spinner"></div>
+                    <p class="loading-text mt-4">Loading pending signatures...</p>
+                </div>
+            `;
 
             try {
                 const res = await fetch('/api/admin/pending-signatures', { credentials: 'include' });
                 const data = await res.json();
 
                 if (data.signatures.length === 0) {
-                    listDiv.innerHTML = '<div class="empty-state"><h3>No pending signatures</h3><p>All signatures have been reviewed</p></div>';
+                    listDiv.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">&#9989;</div>
+                            <div class="empty-state-title">All Caught Up!</div>
+                            <div class="empty-state-description">There are no signatures pending approval.</div>
+                        </div>
+                    `;
                     return;
                 }
 
-                listDiv.innerHTML = data.signatures.map(sig => `
-                    <div class="signature-card" id="sig-${sig.userId}">
-                        <div class="signature-header">
-                            <div>
-                                <h3 style="margin: 0 0 5px;">${sig.name}</h3>
-                                <p style="margin: 0; color: var(--text-muted);">${sig.email}</p>
+                listDiv.innerHTML = `
+                    <div class="grid grid-cols-2 gap-4">
+                        ${data.signatures.map(sig => `
+                            <div class="card" id="sig-${sig.userId}">
+                                <div class="card-body">
+                                    <div class="flex items-center gap-4 mb-4">
+                                        <div class="avatar avatar-lg">${(sig.name || 'U').charAt(0).toUpperCase()}</div>
+                                        <div>
+                                            <h4 class="font-semibold">${sig.name}</h4>
+                                            <p class="text-secondary text-sm">${sig.email}</p>
+                                        </div>
+                                        <span class="badge badge-warning" style="margin-left: auto;">Pending</span>
+                                    </div>
+                                    <div class="signature-preview mb-4">
+                                        <img src="${sig.signatureUrl}" alt="Signature">
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button class="btn btn-success btn-full" onclick="approveSignature('${sig.userId}')">
+                                            <span>&#9989;</span> Approve
+                                        </button>
+                                        <button class="btn btn-danger btn-full" onclick="rejectSignature('${sig.userId}')">
+                                            <span>&#10060;</span> Reject
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            <span class="status-badge pending">Pending</span>
-                        </div>
-                        <div class="signature-preview">
-                            <img src="${sig.signatureUrl}" alt="Signature">
-                        </div>
-                        <div class="signature-actions">
-                            <button class="btn-approve" onclick="approveSignature('${sig.userId}')">Approve</button>
-                            <button class="btn-reject" onclick="rejectSignature('${sig.userId}')">Reject</button>
-                        </div>
+                        `).join('')}
                     </div>
-                `).join('');
+                `;
 
             } catch (err) {
-                listDiv.innerHTML = '<div class="empty-state error"><h3>Failed to load</h3></div>';
+                listDiv.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#10060;</div>
+                        <div class="empty-state-title">Failed to Load</div>
+                        <div class="empty-state-description">Unable to load pending signatures.</div>
+                    </div>
+                `;
             }
         }
 
@@ -512,13 +486,14 @@
 
                 if (data.ok) {
                     document.getElementById(`sig-${userId}`).remove();
-                    showAlert('Signature approved', 'success');
+                    showToast('Signature approved successfully', 'success');
                     loadPendingCount();
+                    loadStats();
                 } else {
-                    showAlert(data.error || 'Failed to approve', 'error');
+                    showToast(data.error || 'Failed to approve', 'error');
                 }
             } catch (err) {
-                showAlert('Failed to approve signature', 'error');
+                showToast('Failed to approve signature', 'error');
             }
         }
 
@@ -535,46 +510,88 @@
 
                 if (data.ok) {
                     document.getElementById(`sig-${userId}`).remove();
-                    showAlert('Signature rejected', 'success');
+                    showToast('Signature rejected', 'success');
                     loadPendingCount();
+                    loadStats();
                 } else {
-                    showAlert(data.error || 'Failed to reject', 'error');
+                    showToast(data.error || 'Failed to reject', 'error');
                 }
             } catch (err) {
-                showAlert('Failed to reject signature', 'error');
+                showToast('Failed to reject signature', 'error');
             }
         }
 
+        // =============================================================================
+        // ALL SIGNATURES
+        // =============================================================================
         async function loadAllSignatures() {
             const listDiv = document.getElementById('allSignatures');
-            listDiv.innerHTML = '<p style="color: var(--text-muted);">Loading...</p>';
+            listDiv.innerHTML = `
+                <div class="empty-state" style="padding: 40px;">
+                    <div class="spinner"></div>
+                    <p class="loading-text mt-4">Loading signatures...</p>
+                </div>
+            `;
 
             try {
                 const res = await fetch('/api/signatures', { credentials: 'include' });
                 const data = await res.json();
 
                 if (data.signatures.length === 0) {
-                    listDiv.innerHTML = '<div class="empty-state"><h3>No approved signatures</h3><p>Invite staff to set up their signatures</p></div>';
+                    listDiv.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">&#9999;</div>
+                            <div class="empty-state-title">No Signatures Yet</div>
+                            <div class="empty-state-description">Invite staff members to set up their digital signatures.</div>
+                        </div>
+                    `;
                     return;
                 }
 
                 listDiv.innerHTML = data.signatures.map(sig => `
-                    <div class="result-item">
-                        <div class="result-avatar">${(sig.name || 'U').charAt(0).toUpperCase()}</div>
-                        <div class="result-info">
-                            <div class="result-name">${sig.name}</div>
-                            <div class="result-email">${sig.email}</div>
+                    <div class="list-item">
+                        <div class="list-item-avatar">
+                            <div class="avatar">${(sig.name || 'U').charAt(0).toUpperCase()}</div>
                         </div>
-                        <div class="signature-preview" style="padding: 10px; margin: 0; background: transparent; border: none;">
+                        <div class="list-item-content">
+                            <div class="list-item-title">${sig.name}</div>
+                            <div class="list-item-subtitle">${sig.email}</div>
+                        </div>
+                        <div class="signature-preview" style="padding: 8px; margin: 0; background: transparent; border: none;">
                             <img src="${sig.signatureUrl}" alt="Signature" style="max-height: 40px;">
                         </div>
-                        <span class="status-badge approved">Approved</span>
+                        <span class="badge badge-success">Approved</span>
                     </div>
                 `).join('');
 
             } catch (err) {
-                listDiv.innerHTML = '<div class="empty-state error"><h3>Failed to load</h3></div>';
+                listDiv.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">&#10060;</div>
+                        <div class="empty-state-title">Failed to Load</div>
+                        <div class="empty-state-description">Unable to load signatures.</div>
+                    </div>
+                `;
             }
+        }
+
+        // =============================================================================
+        // TOAST NOTIFICATIONS
+        // =============================================================================
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '&#9989;' : type === 'error' ? '&#10060;' : '&#9888;'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'toastSlideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
     </script>
 </body>

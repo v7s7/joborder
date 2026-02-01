@@ -3,221 +3,375 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Order Management</title>
+    <title>New Job Order - Job Order Management</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/dashboard.html" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">JO</div>
+                    <div>
+                        <div class="sidebar-logo-text">Job Orders</div>
+                        <div class="sidebar-logo-subtitle">Management System</div>
+                    </div>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main Menu</div>
+                    <a href="/dashboard.html" class="nav-item">
+                        <span class="nav-item-icon">&#128200;</span>
+                        Dashboard
+                    </a>
+                    <a href="/" class="nav-item active">
+                        <span class="nav-item-icon">&#128221;</span>
+                        New Job Order
+                    </a>
+                    <a href="/reports.html" class="nav-item">
+                        <span class="nav-item-icon">&#128202;</span>
+                        Reports
+                    </a>
+                </div>
+
+                <div class="nav-section" id="adminSection" style="display: none;">
+                    <div class="nav-section-title">Administration</div>
+                    <a href="/admin.html" class="nav-item">
+                        <span class="nav-item-icon">&#9999;</span>
+                        Signatures
+                        <span class="nav-item-badge" id="pendingBadge" style="display: none;">0</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user" id="sidebarUser">
+                    <div class="sidebar-user-avatar" id="sidebarAvatar">U</div>
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name" id="sidebarUserName">User</div>
+                        <div class="sidebar-user-role" id="sidebarUserRole">Staff</div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-full mt-2" id="logoutBtn" style="justify-content: flex-start; gap: 12px;">
+                    <span>&#128682;</span> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="icon-btn mobile-menu-toggle" id="menuToggle" style="display: none;">
+                        &#9776;
+                    </button>
+                    <div>
+                        <h1 class="page-title">New Job Order</h1>
+                        <div class="breadcrumb">
+                            <span>Home</span>
+                            <span class="breadcrumb-separator">/</span>
+                            <span>New Job Order</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="job-badge">
+                        <span class="job-badge-label">Job #</span>
+                        <span class="job-badge-number" id="job-number-display">...</span>
+                    </div>
+                    <div class="status-indicator ready" id="statusIndicator">
+                        <span class="status-dot"></span>
+                        <span id="statusText">Ready</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content">
+                <!-- Form Container -->
+                <form id="jobForm" class="form-container">
+                    <div class="grid grid-cols-3 gap-4" style="grid-template-columns: 2fr 1fr;">
+                        <!-- Main Form Column -->
+                        <div class="flex flex-col gap-4">
+                            <!-- General Information Card -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <span class="card-title-icon">&#128203;</span>
+                                        General Information
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Date of Request <span class="text-error">*</span></label>
+                                            <input type="date" class="form-input" name="main_date" id="main_date" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Work Type</label>
+                                            <div class="form-radio-group">
+                                                <label class="form-radio">
+                                                    <input type="radio" name="work_type" value="Site" checked>
+                                                    <span>&#127959; Site</span>
+                                                </label>
+                                                <label class="form-radio">
+                                                    <input type="radio" name="work_type" value="Office">
+                                                    <span>&#127970; Office</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label class="form-label">Department</label>
+                                        <select class="form-select" name="department" id="department">
+                                            <option value="servies">Services</option>
+                                            <option value="Design">Design</option>
+                                            <option value="project">Project</option>
+                                            <option value="QS">QS</option>
+                                            <option value="Mosque Maint.">Mosque Maint.</option>
+                                            <option value="Investment Maint.">Investment Maint.</option>
+                                            <option value="Cemetry">Cemetery</option>
+                                            <option value="MEP">MEP</option>
+                                            <option value="Others">Others</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Work Details Card -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <span class="card-title-icon">&#128196;</span>
+                                        Work Details
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label class="form-label">Objective Name</label>
+                                        <input type="text" class="form-input" name="objective" placeholder="Enter primary objective...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Work Description</label>
+                                        <textarea class="form-textarea" name="description" rows="4" placeholder="Detailed description of the work to be done..."></textarea>
+                                    </div>
+
+                                    <!-- Duration Section -->
+                                    <div class="duration-section">
+                                        <div class="duration-header">Estimated Working Time</div>
+
+                                        <div class="duration-row">
+                                            <span class="duration-label">Days:</span>
+                                            <div class="duration-options">
+                                                <label class="circle-radio"><input type="radio" name="duration_days" value="1"><span>1</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_days" value="2"><span>2</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_days" value="3"><span>3</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_days" value="4"><span>4</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_days" value="5"><span>5</span></label>
+                                            </div>
+                                        </div>
+
+                                        <div class="duration-row">
+                                            <span class="duration-label">Weeks:</span>
+                                            <div class="duration-options">
+                                                <label class="circle-radio"><input type="radio" name="duration_weeks" value="1"><span>1</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_weeks" value="2"><span>2</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_weeks" value="3"><span>3</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_weeks" value="4"><span>4</span></label>
+                                            </div>
+                                        </div>
+
+                                        <div class="duration-row">
+                                            <span class="duration-label">Months:</span>
+                                            <div class="duration-options">
+                                                <label class="circle-radio"><input type="radio" name="duration_months" value="2"><span>2</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_months" value="4"><span>4</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_months" value="6"><span>6</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_months" value="8"><span>8</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_months" value="10"><span>10</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_months" value="12"><span>12</span></label>
+                                            </div>
+                                        </div>
+
+                                        <div class="duration-row">
+                                            <span class="duration-label">Years:</span>
+                                            <div class="duration-options">
+                                                <label class="circle-radio"><input type="radio" name="duration_years" value="1"><span>1</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_years" value="2"><span>2</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_years" value="3"><span>3</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_years" value="4"><span>4</span></label>
+                                                <label class="circle-radio"><input type="radio" name="duration_years" value="5"><span>5</span></label>
+                                            </div>
+                                        </div>
+
+                                        <button type="button" class="duration-clear" onclick="clearDuration()">Clear Selection</button>
+                                    </div>
+
+                                    <div class="form-group mt-4 mb-0">
+                                        <label class="form-label">Additional Notes <span class="form-label-optional">(Optional)</span></label>
+                                        <textarea class="form-textarea" name="note" rows="2" placeholder="Special instructions or notes..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Schedule Card -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <span class="card-title-icon">&#128197;</span>
+                                        Schedule
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-row mb-0">
+                                        <div class="form-group mb-0">
+                                            <label class="form-label">Starting Date</label>
+                                            <input type="date" class="form-input" name="start_date" id="start_date">
+                                        </div>
+                                        <div class="form-group mb-0">
+                                            <label class="form-label">Ending Date</label>
+                                            <input type="date" class="form-input" name="end_date" id="end_date">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Side Column -->
+                        <div class="flex flex-col gap-4">
+                            <!-- Authorization Card -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <span class="card-title-icon">&#9999;</span>
+                                        Authorization
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label class="form-label">Engineer Name</label>
+                                        <input type="text" class="form-input" name="engineer" placeholder="Assigned engineer...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Head of Section</label>
+                                        <input type="text" class="form-input" name="head_section" placeholder="Section head...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Admin Signature</label>
+                                        <select class="form-select" name="admin_signature" id="admin_signature">
+                                            <option value="">-- Select Signature --</option>
+                                        </select>
+                                        <div class="signature-preview-small" id="adminSigPreview"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Staff Signature</label>
+                                        <select class="form-select" name="staff_signature" id="staff_signature">
+                                            <option value="">-- Select Signature --</option>
+                                        </select>
+                                        <div class="signature-preview-small" id="staffSigPreview"></div>
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label class="form-label">Remarks <span class="form-label-optional">(Optional)</span></label>
+                                        <textarea class="form-textarea" name="remarks" rows="3" placeholder="Final comments..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quick Info Card -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <div class="card-title">
+                                        <span class="card-title-icon">&#128161;</span>
+                                        Quick Info
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info" style="margin-bottom: 0;">
+                                        <div class="alert-content">
+                                            <div class="alert-title">Ready to Generate</div>
+                                            <div class="alert-message">Fill in the required fields and click Generate to create your job order report.</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4">
+                                        <div class="flex justify-between text-sm mb-2">
+                                            <span class="text-secondary">Current Date:</span>
+                                            <span class="font-semibold" id="currentDate">-</span>
+                                        </div>
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-secondary">Next Job #:</span>
+                                            <span class="font-semibold" id="currentJobNo">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actions Card -->
+                            <div class="card">
+                                <div class="card-body">
+                                    <button type="submit" class="btn btn-primary btn-lg btn-full mb-4" id="submitBtn">
+                                        <span>&#128196;</span> Generate Report
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-full" onclick="resetForm()">
+                                        <span>&#128260;</span> Clear Form
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
 
     <!-- Login Modal -->
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h2 class="modal-title">Login Required</h2>
-            <p class="modal-subtitle">Please sign in with your Active Directory credentials</p>
-            <form id="loginForm">
-                <div class="form-group">
-                    <label>Username or Email</label>
-                    <input type="text" id="loginUsername" name="username" placeholder="Enter your username..." required autofocus>
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="loginPassword" name="password" placeholder="Enter your password..." required>
-                </div>
-                <div id="loginError" class="error-message" style="display: none;"></div>
-                <button type="submit" class="btn-primary btn-full" id="loginBtn">Sign In</button>
-            </form>
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Login Required</h3>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary mb-4">Please sign in with your Active Directory credentials</p>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label class="form-label">Username or Email</label>
+                        <input type="text" class="form-input" id="loginUsername" placeholder="Enter your username..." required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="loginPassword" placeholder="Enter your password..." required>
+                    </div>
+                    <div class="alert alert-error" id="loginError" style="display: none;"></div>
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn">Sign In</button>
+                </form>
+            </div>
         </div>
     </div>
 
-    <div class="container">
-        <header>
-            <div class="header-content">
-                <div class="title-group">
-                    <h1>Job Work Order</h1>
-                    <p class="subtitle">Complete the form to generate a new order document</p>
-                </div>
-                <div class="header-right">
-                    <div class="job-badge">
-                        <span>JOB #</span>
-                        <span id="job-number-display" class="job-number">...</span>
-                    </div>
-                    <div class="user-section">
-                        <a href="/admin.html" class="admin-link" id="adminLink" style="display: none;">Manage Signatures</a>
-                        <div id="userInfo" class="user-info" style="display: none;">
-                            <span class="user-avatar" id="userAvatar">U</span>
-                            <span class="user-name" id="userName">User</span>
-                            <button type="button" class="btn-logout" id="logoutBtn">Logout</button>
-                        </div>
-                        <button type="button" class="btn-login" id="loginTrigger" style="display: none;">Login</button>
-                    </div>
+    <!-- Success Modal -->
+    <div class="modal-overlay" id="successModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Success!</h3>
+                <button class="modal-close" id="closeSuccessModal">&times;</button>
+            </div>
+            <div class="modal-body text-center">
+                <div style="font-size: 64px; margin-bottom: 16px;">&#9989;</div>
+                <h4 class="font-semibold mb-2">Job Order Created!</h4>
+                <p class="text-secondary mb-4" id="successMessage">Your job order has been generated successfully.</p>
+                <div class="flex gap-4">
+                    <a href="/reports.html" class="btn btn-secondary btn-full">View Reports</a>
+                    <button class="btn btn-primary btn-full" id="createAnotherBtn">Create Another</button>
                 </div>
             </div>
-            <div class="status-bar">
-                <div class="status-indicator ready" id="status-indicator">
-                    <span class="dot">●</span> <span id="status-text">READY</span>
-                </div>
-                <div class="date-display" id="current-date"></div>
-            </div>
-        </header>
-
-        <form id="jobForm">
-
-            <section class="card">
-                <h2>General Information</h2>
-                <div class="row">
-                    <div class="form-group">
-                        <label>Date of Request *</label>
-                        <input type="date" name="main_date" id="main_date" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Work Type</label>
-                        <div class="radio-group">
-                            <label class="radio-btn">
-                                <input type="radio" name="work_type" value="Site" checked> Site
-                            </label>
-                            <label class="radio-btn">
-                                <input type="radio" name="work_type" value="Office"> Office
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="form-group full-width">
-                        <label>Department</label>
-                        <select name="department" id="department">
-                            <option value="servies">servies</option>
-                            <option value="Design">Design</option>
-                            <option value="project">project</option>
-                            <option value="QS">QS</option>
-                            <option value="Mosque Maint.">Mosque Maint.</option>
-                            <option value="Investment Maint.">Investment Maint.</option>
-                            <option value="Cemetry">Cemetry</option>
-                            <option value="MEP">MEP</option>
-                            <option value="Others">Others</option>
-                        </select>
-                    </div>
-                </div>
-            </section>
-
-            <section class="card">
-                <h2>Work Details</h2>
-                <div class="form-group">
-                    <label>Objective Name</label>
-                    <input type="text" name="objective" placeholder="Enter primary objective...">
-                </div>
-                <div class="form-group">
-                    <label>Work Description</label>
-                    <textarea name="description" rows="4" placeholder="Detailed description..."></textarea>
-                </div>
-
-                <div class="duration-section">
-                    <label style="margin-bottom: 15px; display:block; border-bottom:1px solid #eee; padding-bottom:5px;">Estimated Working Time</label>
-
-                    <div class="duration-row">
-                        <span class="duration-label">Days:</span>
-                        <div class="duration-options">
-                            <label class="circle-radio"><input type="radio" name="duration_days" value="1"><span>1</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_days" value="2"><span>2</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_days" value="3"><span>3</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_days" value="4"><span>4</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_days" value="5"><span>5</span></label>
-                        </div>
-                    </div>
-
-                    <div class="duration-row">
-                        <span class="duration-label">Weeks:</span>
-                        <div class="duration-options">
-                            <label class="circle-radio"><input type="radio" name="duration_weeks" value="1"><span>1</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_weeks" value="2"><span>2</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_weeks" value="3"><span>3</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_weeks" value="4"><span>4</span></label>
-                        </div>
-                    </div>
-
-                    <div class="duration-row">
-                        <span class="duration-label">Months:</span>
-                        <div class="duration-options">
-                            <label class="circle-radio"><input type="radio" name="duration_months" value="2"><span>2</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_months" value="4"><span>4</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_months" value="6"><span>6</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_months" value="8"><span>8</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_months" value="10"><span>10</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_months" value="12"><span>12</span></label>
-                        </div>
-                    </div>
-
-                    <div class="duration-row">
-                        <span class="duration-label">Years:</span>
-                        <div class="duration-options">
-                            <label class="circle-radio"><input type="radio" name="duration_years" value="1"><span>1</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_years" value="2"><span>2</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_years" value="3"><span>3</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_years" value="4"><span>4</span></label>
-                            <label class="circle-radio"><input type="radio" name="duration_years" value="5"><span>5</span></label>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-xs" onclick="clearDuration()">Clear Time Selection</button>
-                </div>
-
-                <div class="form-group" style="margin-top: 15px;">
-                    <label>Additional Notes</label>
-                    <textarea name="note" rows="2" placeholder="Special instructions..."></textarea>
-                </div>
-            </section>
-
-            <section class="card">
-                <h2>Schedule</h2>
-                <div class="row">
-                    <div class="form-group">
-                        <label>Starting Date</label>
-                        <input type="date" name="start_date" id="start_date">
-                    </div>
-                    <div class="form-group">
-                        <label>Ending Date</label>
-                        <input type="date" name="end_date" id="end_date">
-                    </div>
-                </div>
-            </section>
-
-            <section class="card">
-                <h2>Authorization</h2>
-                <div class="row">
-                    <div class="form-group">
-                        <label>Engineer Name</label>
-                        <input type="text" name="engineer" placeholder="Assigned engineer...">
-                    </div>
-                    <div class="form-group">
-                        <label>Head of Section</label>
-                        <input type="text" name="head_section" placeholder="Section head...">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="form-group">
-                        <label>Admin Signature (E13)</label>
-                        <select name="admin_signature" id="admin_signature">
-                            <option value="">-- Select Signature --</option>
-                        </select>
-                        <div class="signature-preview-small" id="adminSigPreview"></div>
-                    </div>
-                    <div class="form-group">
-                        <label>Staff Signature (N13)</label>
-                        <select name="staff_signature" id="staff_signature">
-                            <option value="">-- Select Signature --</option>
-                        </select>
-                        <div class="signature-preview-small" id="staffSigPreview"></div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Remarks</label>
-                    <textarea name="remarks" rows="2" placeholder="Final comments..."></textarea>
-                </div>
-            </section>
-
-            <div class="footer-actions">
-                <button type="button" class="btn-secondary" onclick="resetForm()">Clear Form</button>
-                <button type="submit" class="btn-primary" id="submitBtn">Generate PDF Report</button>
-            </div>
-        </form>
+        </div>
     </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
 
     <script src="app.js"></script>
 </body>
