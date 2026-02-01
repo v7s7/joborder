@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Order Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="title-group">
+                    <h1>Job Work Order</h1>
+                    <p class="subtitle">Complete the form to generate a new order document</p>
+                </div>
+                <div class="job-badge">
+                    <span>JOB #</span>
+                    <span id="job-number-display" class="job-number">...</span>
+                </div>
+            </div>
+            <div class="status-bar">
+                <div class="status-indicator ready" id="status-indicator">
+                    <span class="dot">●</span> <span id="status-text">READY</span>
+                </div>
+                <div class="date-display" id="current-date"></div>
+            </div>
+        </header>
+
+        <form id="jobForm">
+            
+            <section class="card">
+                <h2>General Information</h2>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Date of Request *</label>
+                        <input type="date" name="main_date" id="main_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Work Type</label>
+                        <div class="radio-group">
+                            <label class="radio-btn">
+                                <input type="radio" name="work_type" value="Site" checked> Site
+                            </label>
+                            <label class="radio-btn">
+                                <input type="radio" name="work_type" value="Office"> Office
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="form-group full-width">
+                        <label>Department</label>
+                        <select name="department" id="department">
+                            <option value="servies">servies</option>
+                            <option value="Design">Design</option>
+                            <option value="project">project</option>
+                            <option value="QS">QS</option>
+                            <option value="Mosque Maint.">Mosque Maint.</option>
+                            <option value="Investment Maint.">Investment Maint.</option>
+                            <option value="Cemetry">Cemetry</option>
+                            <option value="MEP">MEP</option>
+                            <option value="Others">Others</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Work Details</h2>
+                <div class="form-group">
+                    <label>Objective Name</label>
+                    <input type="text" name="objective" placeholder="Enter primary objective...">
+                </div>
+                <div class="form-group">
+                    <label>Work Description</label>
+                    <textarea name="description" rows="4" placeholder="Detailed description..."></textarea>
+                </div>
+                
+                <div class="duration-section">
+                    <label style="margin-bottom: 15px; display:block; border-bottom:1px solid #eee; padding-bottom:5px;">Estimated Working Time</label>
+                    
+                    <div class="duration-row">
+                        <span class="duration-label">Days:</span>
+                        <div class="duration-options">
+                            <label class="circle-radio"><input type="radio" name="duration_days" value="1"><span>1</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_days" value="2"><span>2</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_days" value="3"><span>3</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_days" value="4"><span>4</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_days" value="5"><span>5</span></label>
+                        </div>
+                    </div>
+
+                    <div class="duration-row">
+                        <span class="duration-label">Weeks:</span>
+                        <div class="duration-options">
+                            <label class="circle-radio"><input type="radio" name="duration_weeks" value="1"><span>1</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_weeks" value="2"><span>2</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_weeks" value="3"><span>3</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_weeks" value="4"><span>4</span></label>
+                        </div>
+                    </div>
+
+                    <div class="duration-row">
+                        <span class="duration-label">Months:</span>
+                        <div class="duration-options">
+                            <label class="circle-radio"><input type="radio" name="duration_months" value="2"><span>2</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_months" value="4"><span>4</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_months" value="6"><span>6</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_months" value="8"><span>8</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_months" value="10"><span>10</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_months" value="12"><span>12</span></label>
+                        </div>
+                    </div>
+
+                    <div class="duration-row">
+                        <span class="duration-label">Years:</span>
+                        <div class="duration-options">
+                            <label class="circle-radio"><input type="radio" name="duration_years" value="1"><span>1</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_years" value="2"><span>2</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_years" value="3"><span>3</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_years" value="4"><span>4</span></label>
+                            <label class="circle-radio"><input type="radio" name="duration_years" value="5"><span>5</span></label>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-xs" onclick="clearDuration()">Clear Time Selection</button>
+                </div>
+
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Additional Notes</label>
+                    <textarea name="note" rows="2" placeholder="Special instructions..."></textarea>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Schedule</h2>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Starting Date</label>
+                        <input type="date" name="start_date" id="start_date">
+                    </div>
+                    <div class="form-group">
+                        <label>Ending Date</label>
+                        <input type="date" name="end_date" id="end_date">
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Authorization</h2>
+                <div class="row">
+                    <div class="form-group">
+                        <label>Engineer Name</label>
+                        <input type="text" name="engineer" placeholder="Assigned engineer...">
+                    </div>
+                    <div class="form-group">
+                        <label>Head of Section</label>
+                        <input type="text" name="head_section" placeholder="Section head...">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Remarks</label>
+                    <textarea name="remarks" rows="2" placeholder="Final comments..."></textarea>
+                </div>
+            </section>
+
+            <div class="footer-actions">
+                <button type="button" class="btn-secondary" onclick="resetForm()">Clear Form</button>
+                <button type="submit" class="btn-primary" id="submitBtn">Generate PDF Report</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

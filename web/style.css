@@ -1,0 +1,258 @@
+:root {
+    --bg-color: #F8F9FA;
+    --card-bg: #FFFFFF;
+    --primary: #1A73E8;
+    --primary-hover: #1557B0;
+    --text-main: #202124;
+    --text-muted: #5F6368;
+    --border: #E1E8ED;
+    --success: #0F9D58;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    max-width: 800px;
+    width: 100%;
+}
+
+/* Header */
+header {
+    background: var(--card-bg);
+    padding: 20px 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+h1 { margin: 0; font-size: 24px; color: var(--text-main); }
+.subtitle { margin: 5px 0 0; color: var(--text-muted); font-size: 14px; }
+
+.job-badge {
+    background: #F1F3F4;
+    padding: 8px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.job-number {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.status-bar {
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-indicator.ready { color: var(--success); }
+.status-indicator.processing { color: #F9AB00; }
+.date-display { color: var(--text-muted); font-weight: normal; }
+
+/* Cards */
+.card {
+    background: var(--card-bg);
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+/* Form Elements */
+.row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    flex: 1;
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+input[type="text"], input[type="date"], textarea, select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: inherit;
+    box-sizing: border-box; /* Fix padding issues */
+    background: #FAFAFA;
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: #FFF;
+}
+
+/* Radio Buttons */
+.radio-group {
+    display: flex;
+    gap: 20px;
+    padding-top: 8px;
+}
+
+.radio-btn {
+    font-weight: normal;
+    cursor: pointer;
+}
+
+/* Footer Buttons */
+.footer-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 30px;
+    padding-bottom: 40px;
+}
+
+button {
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+    border: none;
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover { background-color: var(--primary-hover); }
+
+.btn-secondary {
+    background-color: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover { background-color: #F1F3F4; }
+.btn-primary:disabled { background-color: #ccc; cursor: not-allowed; }
+/* ... KEEP ALL PREVIOUS CSS AND ADD THIS AT THE BOTTOM ... */
+
+/* Duration Section Styles */
+.duration-section {
+    background-color: #FAFAFA;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 15px;
+}
+
+.duration-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.duration-label {
+    width: 70px;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--text-muted);
+}
+
+.duration-options {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Circular Radio Buttons */
+.circle-radio {
+    cursor: pointer;
+    position: relative;
+}
+
+.circle-radio input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.circle-radio span {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #fff;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text-muted);
+    transition: all 0.2s;
+}
+
+.circle-radio input:checked + span {
+    background-color: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 2px 4px rgba(26, 115, 232, 0.3);
+}
+
+.circle-radio:hover span {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.circle-radio input:checked:hover span {
+    color: white;
+}
+
+.btn-xs {
+    font-size: 11px;
+    padding: 4px 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: 5px;
+}
+.btn-xs:hover { color: var(--danger, red); }
