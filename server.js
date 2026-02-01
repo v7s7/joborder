@@ -815,10 +815,10 @@ app.post('/api/generate', async (req, res) => {
             filename: imagePath,
             extension: 'png'
           });
-          // E13 position - adjust based on your template
+          // E13 position: anchor image within the cell boundaries
           ws.addImage(imageId, {
-            tl: { col: 4, row: 12 },  // E13 (0-indexed: col 4 = E, row 12 = 13)
-            ext: { width: 100, height: 40 }
+            tl: { col: 4, row: 12 },   // E13 (0-indexed)
+            br: { col: 5, row: 13 }    // E13 (next column/row)
           });
         }
       }
@@ -833,10 +833,10 @@ app.post('/api/generate', async (req, res) => {
             filename: imagePath,
             extension: 'png'
           });
-          // N13 position
+          // N13 position: anchor image within the cell boundaries
           ws.addImage(imageId, {
-            tl: { col: 13, row: 12 },  // N13 (0-indexed: col 13 = N, row 12 = 13)
-            ext: { width: 100, height: 40 }
+            tl: { col: 13, row: 12 },  // N13 (0-indexed)
+            br: { col: 14, row: 13 }   // N13 (next column/row)
           });
         }
       }
