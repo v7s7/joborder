@@ -24,20 +24,16 @@
                 <div class="nav-section">
                     <div class="nav-section-title">Main Menu</div>
                     <a href="/dashboard.html" class="nav-item">
-                        <span class="nav-item-icon">&#128200;</span>
                         Dashboard
                     </a>
-                    <a href="/" class="nav-item active">
-                        <span class="nav-item-icon">&#128221;</span>
+                    <a href="/" class="nav-item active" id="newJobOrderNav">
                         New Job Order
                     </a>
-                    <a href="/reports.html" class="nav-item">
-                        <span class="nav-item-icon">&#128202;</span>
+                    <a href="/reports.html" class="nav-item" id="reportsNav">
                         Reports
                     </a>
                     <a href="/pending-approvals.html" class="nav-item">
-                        <span class="nav-item-icon">&#128338;</span>
-                        Pending Approvals
+                        <span id="navApprovalLabel">Pending Approvals</span>
                         <span class="nav-item-badge" id="approvalsBadge" style="display: none;">0</span>
                     </a>
                 </div>
@@ -45,7 +41,6 @@
                 <div class="nav-section" id="adminSection" style="display: none;">
                     <div class="nav-section-title">Administration</div>
                     <a href="/admin.html" class="nav-item">
-                        <span class="nav-item-icon">&#9999;</span>
                         Signatures
                         <span class="nav-item-badge" id="pendingBadge" style="display: none;">0</span>
                     </a>
@@ -61,7 +56,7 @@
                     </div>
                 </div>
                 <button class="btn btn-ghost btn-full mt-2" id="logoutBtn" style="justify-content: flex-start; gap: 12px;">
-                    <span>&#128682;</span> Logout
+                    Logout
                 </button>
             </div>
         </aside>
@@ -71,9 +66,7 @@
             <!-- Top Bar -->
             <header class="top-bar">
                 <div class="top-bar-left">
-                    <button class="icon-btn mobile-menu-toggle" id="menuToggle" style="display: none;">
-                        &#9776;
-                    </button>
+                    <button class="icon-btn mobile-menu-toggle" id="menuToggle" style="display: none;">Menu</button>
                     <div>
                         <h1 class="page-title">New Job Order</h1>
                         <div class="breadcrumb">
@@ -97,6 +90,16 @@
 
             <!-- Page Content -->
             <div class="page-content">
+                <div class="alert alert-info mb-4" id="staffNotice" style="display: none;">
+                    <div class="alert-icon"></div>
+                    <div class="alert-content">
+                        <div class="alert-title">Signature Requests Only</div>
+                        <div class="alert-message">
+                            Your account can review and accept signature requests, but cannot generate reports.
+                            Please visit <a href="/pending-approvals.html">Pending Approvals</a> to approve signatures.
+                        </div>
+                    </div>
+                </div>
                 <!-- Form Container -->
                 <form id="jobForm" class="form-container">
                     <div class="grid grid-cols-3 gap-4" style="grid-template-columns: 2fr 1fr;">
@@ -106,7 +109,6 @@
                             <div class="card">
                                 <div class="card-header">
                                     <div class="card-title">
-                                        <span class="card-title-icon">&#128203;</span>
                                         General Information
                                     </div>
                                 </div>
@@ -121,11 +123,11 @@
                                             <div class="form-radio-group">
                                                 <label class="form-radio">
                                                     <input type="radio" name="work_type" value="Site" checked>
-                                                    <span>&#127959; Site</span>
+                                                    <span> Site</span>
                                                 </label>
                                                 <label class="form-radio">
                                                     <input type="radio" name="work_type" value="Office">
-                                                    <span>&#127970; Office</span>
+                                                    <span> Office</span>
                                                 </label>
                                             </div>
                                         </div>
@@ -151,7 +153,6 @@
                             <div class="card">
                                 <div class="card-header">
                                     <div class="card-title">
-                                        <span class="card-title-icon">&#128196;</span>
                                         Work Details
                                     </div>
                                 </div>
@@ -227,7 +228,6 @@
                             <div class="card">
                                 <div class="card-header">
                                     <div class="card-title">
-                                        <span class="card-title-icon">&#128197;</span>
                                         Schedule
                                     </div>
                                 </div>
@@ -252,7 +252,6 @@
                             <div class="card">
                                 <div class="card-header">
                                     <div class="card-title">
-                                        <span class="card-title-icon">&#9999;</span>
                                         Authorization
                                     </div>
                                 </div>
@@ -290,7 +289,6 @@
                             <div class="card">
                                 <div class="card-header">
                                     <div class="card-title">
-                                        <span class="card-title-icon">&#128161;</span>
                                         Quick Info
                                     </div>
                                 </div>
@@ -318,10 +316,10 @@
                             <div class="card">
                                 <div class="card-body">
                                     <button type="submit" class="btn btn-primary btn-lg btn-full mb-4" id="submitBtn">
-                                        <span>&#128196;</span> Generate Report
+                                        Generate Report
                                     </button>
                                     <button type="button" class="btn btn-secondary btn-full" onclick="resetForm()">
-                                        <span>&#128260;</span> Clear Form
+                                        Clear Form
                                     </button>
                                 </div>
                             </div>
@@ -364,7 +362,7 @@
                 <button class="modal-close" id="closeSuccessModal">&times;</button>
             </div>
             <div class="modal-body text-center">
-                <div style="font-size: 64px; margin-bottom: 16px;">&#9989;</div>
+                <div style="font-size: 64px; margin-bottom: 16px;"></div>
                 <h4 class="font-semibold mb-2">Job Order Created!</h4>
                 <p class="text-secondary mb-4" id="successMessage">Your job order has been generated successfully.</p>
                 <div class="flex gap-4">
