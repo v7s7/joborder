@@ -92,7 +92,7 @@
             <!-- Page Content -->
             <div class="page-content">
                 <div class="alert alert-info mb-4" id="staffApprovalNotice" style="display: none;">
-                    <div class="alert-icon">&#128221;</div>
+                    <div class="alert-icon"></div>
                     <div class="alert-content">
                         <div class="alert-title">Your Signature Requests</div>
                         <div class="alert-message">
@@ -403,20 +403,20 @@
                         <div class="flex gap-2 justify-end">
                             ${canRespond ? `
                                 <button class="btn btn-success" onclick="respondToApproval('${approval.token}', 'approve')">
-                                    <span>&#9989;</span> Approve
+                                    Approve
                                 </button>
                                 <button class="btn btn-error" onclick="respondToApproval('${approval.token}', 'reject')">
-                                    <span>&#10060;</span> Reject
+                                    Reject
                                 </button>
                             ` : ''}
                             ${canGenerate ? `
                                 <button class="btn btn-success" onclick="generateFromApproval('${approval.token}')">
-                                    <span>&#128196;</span> Generate Report
+                                    Generate Report
                                 </button>
                             ` : ''}
                             ${canDelete ? `
                                 <button class="btn btn-ghost" onclick="deleteApproval('${approval.token}')">
-                                    <span>&#128465;</span> Delete
+                                    Delete
                                 </button>
                             ` : ''}
                         </div>
