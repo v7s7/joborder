@@ -1362,7 +1362,8 @@ async function generateJobOrderReport(data) {
   ];
   const typeCell = ws.getCell('M3');
   typeCell.value = typeLines.join('\n');
-  typeCell.alignment = { wrapText: true };
+  typeCell.alignment = { wrapText: true, vertical: 'center', horizontal: 'center' };
+  typeCell.font = { size: 11 };
 
   const departmentValue = (data.department || '').toLowerCase();
   const departmentOptions = [
@@ -1382,7 +1383,8 @@ async function generateJobOrderReport(data) {
   });
   const departmentCell = ws.getCell('Q3');
   departmentCell.value = departmentLines.join('\n');
-  departmentCell.alignment = { wrapText: true };
+  departmentCell.alignment = { wrapText: true, vertical: 'center' };
+  departmentCell.font = { size: 11 };
 
   // Add signatures as images - stretch to fit merged cell dimensions
   // E13:I13 is merged (cols 4-8), N13:T13 is merged (cols 13-19)
