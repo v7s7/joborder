@@ -1354,6 +1354,36 @@ async function generateJobOrderReport(data) {
     }
   }
 
+  // Fill type and department selections with text checkboxes
+  const typeValue = (data.work_type || '').toLowerCase();
+  const typeLines = [
+    `${typeValue === 'site' ? '[X]' : '[ ]'} Site`,
+    `${typeValue === 'office' ? '[X]' : '[ ]'} Office`
+  ];
+  const typeCell = ws.getCell('M3');
+  typeCell.value = typeLines.join('\n');
+  typeCell.alignment = { wrapText: true };
+
+  const departmentValue = (data.department || '').toLowerCase();
+  const departmentOptions = [
+    { key: 'servies', label: 'Services' },
+    { key: 'design', label: 'Design' },
+    { key: 'project', label: 'Project' },
+    { key: 'qs', label: 'QS' },
+    { key: 'mosque maint.', label: 'Mosque Maint.' },
+    { key: 'investment maint.', label: 'Investment Maint.' },
+    { key: 'cemetry', label: 'Cemetery' },
+    { key: 'mep', label: 'MEP' },
+    { key: 'others', label: 'Others' }
+  ];
+  const departmentLines = departmentOptions.map((option) => {
+    const checked = option.key === departmentValue ? '[X]' : '[ ]';
+    return `${checked} ${option.label}`;
+  });
+  const departmentCell = ws.getCell('Q3');
+  departmentCell.value = departmentLines.join('\n');
+  departmentCell.alignment = { wrapText: true };
+
   // Add signatures as images - stretch to fit merged cell dimensions
   // E13:I13 is merged (cols 4-8), N13:T13 is merged (cols 13-19)
   if (data.admin_signature) {
