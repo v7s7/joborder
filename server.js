@@ -1336,10 +1336,11 @@ async function generateJobOrderReport(data) {
     fgColor: { argb: 'FFFFFF00' }
   };
 
-  // Clear fill for ALL duration cells first (A9 to T9)
+  // Clear fill for ALL duration cells first (A9 to T9) - use white fill
   const noFill = {
     type: 'pattern',
-    pattern: 'none'
+    pattern: 'solid',
+    fgColor: { argb: 'FFFFFFFF' }
   };
 
   // Clear all cells in all duration categories
@@ -1388,7 +1389,7 @@ async function generateJobOrderReport(data) {
   ];
   const typeCell = ws.getCell('M3');
   typeCell.value = buildCheckboxRichText(typeOptions, typeValue);
-  typeCell.alignment = { ...(typeCell.alignment || {}), wrapText: true, vertical: 'middle' };
+  typeCell.alignment = { ...(typeCell.alignment || {}), wrapText: true, vertical: 'top' };
 
   // Fill department selections with text checkboxes
   const departmentValue = (data.department || '').toLowerCase();
