@@ -1354,17 +1354,34 @@ async function generateJobOrderReport(data) {
     }
   }
 
-  // Fill type and department selections with text checkboxes
+  const buildCheckboxRichText = (options, selectedKey) => {
+    const richText = [];
+    options.forEach((option, index) => {
+      const isSelected = option.key === selectedKey;
+      const box = isSelected ? '[X]' : '[  ]';
+      const text = `${box} ${option.label}${index < options.length - 1 ? '\n' : ''}`;
+      richText.push({
+        text,
+        font: {
+          size: 11,
+          bold: isSelected
+        }
+      });
+    });
+    return { richText };
+  };
+
+  // Fill type selections with text checkboxes
   const typeValue = (data.work_type || '').toLowerCase();
-  const typeLines = [
-    `${typeValue === 'site' ? '[X]' : '[ ]'} Site`,
-    `${typeValue === 'office' ? '[X]' : '[ ]'} Office`
+  const typeOptions = [
+    { key: 'site', label: 'Site' },
+    { key: 'office', label: 'Office' }
   ];
   const typeCell = ws.getCell('M3');
-  typeCell.value = typeLines.join('\n');
+  typeCell.value = buildCheckboxRichText(typeOptions, typeValue);
   typeCell.alignment = { wrapText: true, vertical: 'center', horizontal: 'center' };
-  typeCell.font = { size: 11, bold: true };
 
+  // Fill department selections with text checkboxes
   const departmentValue = (data.department || '').toLowerCase();
   const departmentOptions = [
     { key: 'servies', label: 'Services' },
@@ -1377,14 +1394,9 @@ async function generateJobOrderReport(data) {
     { key: 'mep', label: 'MEP' },
     { key: 'others', label: 'Others' }
   ];
-  const departmentLines = departmentOptions.map((option) => {
-    const checked = option.key === departmentValue ? '[X]' : '[ ]';
-    return `${checked} ${option.label}`;
-  });
   const departmentCell = ws.getCell('Q3');
-  departmentCell.value = departmentLines.join('\n');
+  departmentCell.value = buildCheckboxRichText(departmentOptions, departmentValue);
   departmentCell.alignment = { wrapText: true, vertical: 'center' };
-  departmentCell.font = { size: 11, bold: true };
 
   // Add signatures as images - stretch to fit merged cell dimensions
   // E13:I13 is merged (cols 4-8), N13:T13 is merged (cols 13-19)
