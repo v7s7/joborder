@@ -351,6 +351,7 @@
             const isCreator = approval.createdBy?.toLowerCase() === currentUser?.email?.toLowerCase();
             const isStaffApprover = approval.staffEmail?.toLowerCase() === currentUser?.email?.toLowerCase();
             const canRespond = approval.status === 'pending' && isStaffApprover;
+            const canReview = isStaffApprover;
             const canGenerate = approval.status === 'approved' && (currentUser?.isAdmin || currentUser?.isLeader || isCreator);
             const canDelete = currentUser?.isAdmin || isCreator;
 
@@ -394,6 +395,11 @@
                         </div>
 
                         <div class="flex gap-2 justify-end">
+                            ${canReview ? `
+                                <a class="btn btn-secondary" href="/approval-review.html?token=${approval.token}">
+                                    Review Request
+                                </a>
+                            ` : ''}
                             ${canRespond ? `
                                 <button class="btn btn-success" onclick="respondToApproval('${approval.token}', 'approve')">
                                     Approve
@@ -426,16 +432,21 @@
             }
 
             try {
-                // Redirect to main form with the approval data pre-filled
-                const reportData = approval.reportData || {};
-                reportData.staff_signature = approval.staffUserId;
-                reportData._approvalToken = token;
+                const res = await fetch(`/api/approvals/${token}/generate`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
 
-                // Store in sessionStorage and redirect
-                sessionStorage.setItem('pendingApprovalData', JSON.stringify(reportData));
-                window.location.href = '/?fromApproval=true';
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || 'Report generation failed');
+                }
+
+                showToast(`Job order ${data.job_no} generated successfully`, 'success');
+                window.location.href = '/reports.html';
             } catch (err) {
-                showToast('Failed to prepare report generation', 'error');
+                showToast(err.message || 'Failed to generate report', 'error');
             }
         }
 
