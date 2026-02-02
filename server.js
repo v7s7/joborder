@@ -1310,9 +1310,8 @@ async function generateJobOrderReport(data) {
       const currentCell = ws.getCell(cell);
 
       if (field === 'end_date') {
-        const existing = currentCell.value || '';
-        const label = typeof existing === 'string' ? existing.split(':')[0] + ':' : '';
-        currentCell.value = label ? `${label} ${formattedDate}` : formattedDate;
+        // Just use the formatted date without any prefix
+        currentCell.value = formattedDate;
       } else {
         currentCell.value = formattedDate;
       }
@@ -1337,14 +1336,24 @@ async function generateJobOrderReport(data) {
     fgColor: { argb: 'FFFFFF00' }
   };
 
+  // Clear fill for ALL duration cells first (A9 to T9)
+  const noFill = {
+    type: 'pattern',
+    pattern: 'none'
+  };
+
+  // Clear all cells in all duration categories
+  Object.values(DURATION_MAPPING).forEach((categoryMap) => {
+    Object.values(categoryMap).forEach((cellAddr) => {
+      ws.getCell(cellAddr).fill = noFill;
+    });
+  });
+
+  // Now apply highlight only to selected cells
   for (const field of durationFields) {
     const value = data[field];
     const category = field.replace('duration_', '');
     const categoryMap = DURATION_MAPPING[category] || {};
-
-    Object.values(categoryMap).forEach((cellAddr) => {
-      ws.getCell(cellAddr).fill = null;
-    });
 
     if (value) {
       const cellAddr = categoryMap[value];
@@ -1379,7 +1388,7 @@ async function generateJobOrderReport(data) {
   ];
   const typeCell = ws.getCell('M3');
   typeCell.value = buildCheckboxRichText(typeOptions, typeValue);
-  typeCell.alignment = { ...(typeCell.alignment || {}), wrapText: true };
+  typeCell.alignment = { ...(typeCell.alignment || {}), wrapText: true, vertical: 'middle' };
 
   // Fill department selections with text checkboxes
   const departmentValue = (data.department || '').toLowerCase();
