@@ -1337,32 +1337,42 @@ async function generateJobOrderReport(data) {
   };
 
   // Clear fill for ALL duration cells first (A9 to T9) - use white fill
-  const noFill = {
+  const whiteFill = {
     type: 'pattern',
     pattern: 'solid',
     fgColor: { argb: 'FFFFFFFF' }
   };
 
-  // Clear all cells in all duration categories
-  Object.values(DURATION_MAPPING).forEach((categoryMap) => {
-    Object.values(categoryMap).forEach((cellAddr) => {
-      ws.getCell(cellAddr).fill = noFill;
-    });
+  // First, clear ALL cells from A9 to T9 with white fill
+  const allDurationCells = ['A9', 'B9', 'C9', 'D9', 'E9', 'F9', 'G9', 'H9', 'I9', 'J9', 'K9', 'L9', 'M9', 'N9', 'O9', 'P9', 'Q9', 'R9', 'S9', 'T9'];
+  allDurationCells.forEach((cellAddr) => {
+    const cell = ws.getCell(cellAddr);
+    cell.fill = whiteFill;
   });
 
-  // Now apply highlight only to selected cells
+  // Debug logging
+  console.log('Duration data received:', {
+    days: data.duration_days,
+    weeks: data.duration_weeks,
+    months: data.duration_months,
+    years: data.duration_years
+  });
+
+  // Now apply highlight ONLY to selected cells
+  const cellsToHighlight = [];
   for (const field of durationFields) {
     const value = data[field];
-    const category = field.replace('duration_', '');
-    const categoryMap = DURATION_MAPPING[category] || {};
-
     if (value) {
+      const category = field.replace('duration_', '');
+      const categoryMap = DURATION_MAPPING[category] || {};
       const cellAddr = categoryMap[value];
       if (cellAddr) {
+        cellsToHighlight.push(cellAddr);
         ws.getCell(cellAddr).fill = highlightFill;
       }
     }
   }
+  console.log('Cells highlighted:', cellsToHighlight);
 
   const buildCheckboxRichText = (options, selectedKey) => {
     const richText = [];
