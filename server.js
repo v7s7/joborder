@@ -933,7 +933,7 @@ app.post('/api/generate', async (req, res) => {
       }
     }
 
-    // Add signatures as images
+    // Add signatures as images - stretch to fit cell dimensions
     if (data.admin_signature) {
       const sig = db.signatures[data.admin_signature.toLowerCase()];
       if (sig && sig.status === 'approved') {
@@ -943,10 +943,11 @@ app.post('/api/generate', async (req, res) => {
             filename: imagePath,
             extension: 'png'
           });
-          // E13 position: anchor image within the cell boundaries
+          // E13 position: stretch image to fill cell (col 4 = E, row 12 = row 13 in 1-indexed)
           ws.addImage(imageId, {
-            tl: { col: 4, row: 12 },   // E13 (0-indexed)
-            br: { col: 5, row: 13 }    // E13 (next column/row)
+            tl: { col: 4, row: 12, nativeColOff: 0, nativeRowOff: 0 },
+            br: { col: 4.99, row: 12.99, nativeColOff: 0, nativeRowOff: 0 },
+            editAs: 'twoCell'
           });
         }
       }
@@ -961,10 +962,11 @@ app.post('/api/generate', async (req, res) => {
             filename: imagePath,
             extension: 'png'
           });
-          // N13 position: anchor image within the cell boundaries
+          // N13 position: stretch image to fill cell (col 13 = N, row 12 = row 13 in 1-indexed)
           ws.addImage(imageId, {
-            tl: { col: 13, row: 12 },  // N13 (0-indexed)
-            br: { col: 14, row: 13 }   // N13 (next column/row)
+            tl: { col: 13, row: 12, nativeColOff: 0, nativeRowOff: 0 },
+            br: { col: 13.99, row: 12.99, nativeColOff: 0, nativeRowOff: 0 },
+            editAs: 'twoCell'
           });
         }
       }
