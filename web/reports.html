@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Job Order Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/dashboard.html" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">JO</div>
+                    <div>
+                        <div class="sidebar-logo-text">Job Orders</div>
+                        <div class="sidebar-logo-subtitle">Management System</div>
+                    </div>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main Menu</div>
+                    <a href="/dashboard.html" class="nav-item">
+                        <span class="nav-item-icon">&#128200;</span>
+                        Dashboard
+                    </a>
+                    <a href="/" class="nav-item">
+                        <span class="nav-item-icon">&#128221;</span>
+                        New Job Order
+                    </a>
+                    <a href="/reports.html" class="nav-item active">
+                        <span class="nav-item-icon">&#128202;</span>
+                        Reports
+                    </a>
+                </div>
+
+                <div class="nav-section" id="adminSection" style="display: none;">
+                    <div class="nav-section-title">Administration</div>
+                    <a href="/admin.html" class="nav-item">
+                        <span class="nav-item-icon">&#9999;</span>
+                        Signatures
+                        <span class="nav-item-badge" id="pendingBadge" style="display: none;">0</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user" id="sidebarUser">
+                    <div class="sidebar-user-avatar" id="sidebarAvatar">U</div>
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name" id="sidebarUserName">User</div>
+                        <div class="sidebar-user-role" id="sidebarUserRole">Staff</div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-full mt-2" id="logoutBtn" style="justify-content: flex-start; gap: 12px;">
+                    <span>&#128682;</span> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="icon-btn mobile-menu-toggle" id="menuToggle" style="display: none;">
+                        &#9776;
+                    </button>
+                    <div>
+                        <h1 class="page-title">Reports</h1>
+                        <div class="breadcrumb">
+                            <span>Home</span>
+                            <span class="breadcrumb-separator">/</span>
+                            <span>Reports</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="status-indicator ready" id="statusIndicator">
+                        <span class="status-dot"></span>
+                        <span id="statusText">System Ready</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content">
+                <!-- Filters Card -->
+                <div class="card mb-6">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-title-icon">&#128269;</span>
+                            Filter Reports
+                        </div>
+                        <button class="btn btn-ghost btn-sm" id="clearFilters">Clear Filters</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="grid grid-cols-4 gap-4" style="grid-template-columns: repeat(4, 1fr);">
+                            <div class="form-group mb-0">
+                                <label class="form-label">Date From</label>
+                                <input type="date" class="form-input" id="filterDateFrom">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label">Date To</label>
+                                <input type="date" class="form-input" id="filterDateTo">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label">Department</label>
+                                <select class="form-select" id="filterDepartment">
+                                    <option value="">All Departments</option>
+                                    <option value="servies">Services</option>
+                                    <option value="Design">Design</option>
+                                    <option value="project">Project</option>
+                                    <option value="QS">QS</option>
+                                    <option value="Mosque Maint.">Mosque Maint.</option>
+                                    <option value="Investment Maint.">Investment Maint.</option>
+                                    <option value="Cemetry">Cemetery</option>
+                                    <option value="MEP">MEP</option>
+                                    <option value="Others">Others</option>
+                                </select>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label">Work Type</label>
+                                <select class="form-select" id="filterWorkType">
+                                    <option value="">All Types</option>
+                                    <option value="Site">Site</option>
+                                    <option value="Office">Office</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mt-4" style="padding-top: 16px; border-top: 1px solid var(--border-light);">
+                            <div class="flex gap-2">
+                                <button class="btn btn-primary" id="applyFilters">
+                                    <span>&#128269;</span> Apply Filters
+                                </button>
+                                <button class="btn btn-secondary" id="exportExcel">
+                                    <span>&#128230;</span> Export to Excel
+                                </button>
+                            </div>
+                            <div class="text-secondary text-sm" id="resultsCount">
+                                Showing <strong>0</strong> reports
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Stats -->
+                <div class="stats-grid mb-6" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="stat-card" style="--stat-color: var(--primary);">
+                        <div class="stat-card-icon primary">&#128221;</div>
+                        <div class="stat-card-content">
+                            <div class="stat-card-title">Total Reports</div>
+                            <div class="stat-card-value" id="statTotal">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="--stat-color: var(--success);">
+                        <div class="stat-card-icon success">&#127959;</div>
+                        <div class="stat-card-content">
+                            <div class="stat-card-title">Site Work</div>
+                            <div class="stat-card-value" id="statSite">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="--stat-color: var(--info);">
+                        <div class="stat-card-icon info">&#127970;</div>
+                        <div class="stat-card-content">
+                            <div class="stat-card-title">Office Work</div>
+                            <div class="stat-card-value" id="statOffice">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="--stat-color: var(--warning);">
+                        <div class="stat-card-icon warning">&#128197;</div>
+                        <div class="stat-card-content">
+                            <div class="stat-card-title">This Month</div>
+                            <div class="stat-card-value" id="statMonth">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-title-icon">&#128203;</span>
+                            Job Order Reports
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="top-bar-search">
+                                <span class="top-bar-search-icon">&#128269;</span>
+                                <input type="text" placeholder="Search by job number..." id="searchInput">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body" style="padding: 0;">
+                        <div class="table-container" id="reportsTableContainer">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Job #</th>
+                                        <th>Date</th>
+                                        <th>Department</th>
+                                        <th>Work Type</th>
+                                        <th>Engineer</th>
+                                        <th>Duration</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportsTableBody">
+                                    <tr>
+                                        <td colspan="8" class="table-empty">
+                                            <div class="spinner" style="margin: 20px auto;"></div>
+                                            <p class="loading-text">Loading reports...</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer flex justify-between items-center">
+                        <div class="text-sm text-secondary" id="paginationInfo">
+                            Showing 1-10 of 0 reports
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn btn-secondary btn-sm" id="prevPage" disabled>Previous</button>
+                            <button class="btn btn-secondary btn-sm" id="nextPage" disabled>Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Login Required</h3>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary mb-4">Please sign in with your Active Directory credentials</p>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label class="form-label">Username or Email</label>
+                        <input type="text" class="form-input" id="loginUsername" placeholder="Enter your username..." required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="loginPassword" placeholder="Enter your password..." required>
+                    </div>
+                    <div class="alert alert-error" id="loginError" style="display: none;"></div>
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn">Sign In</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download Modal -->
+    <div class="modal-overlay" id="downloadModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Download Report</h3>
+                <button class="modal-close" id="closeDownloadModal">&times;</button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-4">
+                    <div style="font-size: 48px; margin-bottom: 16px;">&#128230;</div>
+                    <h4 class="font-semibold mb-2" id="downloadFileName">Job_1001.xlsx</h4>
+                    <p class="text-secondary text-sm">Click the button below to download your report.</p>
+                </div>
+                <a href="#" class="btn btn-primary btn-lg btn-full" id="downloadLink" download>
+                    <span>&#11015;</span> Download Excel File
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // =============================================================================
+        // STATE
+        // =============================================================================
+        let currentUser = null;
+        let reports = [];
+        let filteredReports = [];
+        let currentPage = 1;
+        const pageSize = 10;
+
+        // =============================================================================
+        // DOM ELEMENTS
+        // =============================================================================
+        const loginModal = document.getElementById('loginModal');
+        const loginForm = document.getElementById('loginForm');
+        const loginError = document.getElementById('loginError');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const downloadModal = document.getElementById('downloadModal');
+
+        // =============================================================================
+        // INITIALIZATION
+        // =============================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+
+            // Event listeners
+            loginForm.addEventListener('submit', handleLogin);
+            logoutBtn.addEventListener('click', handleLogout);
+            document.getElementById('applyFilters').addEventListener('click', applyFilters);
+            document.getElementById('clearFilters').addEventListener('click', clearFilters);
+            document.getElementById('exportExcel').addEventListener('click', exportToExcel);
+            document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, 300));
+            document.getElementById('prevPage').addEventListener('click', () => changePage(-1));
+            document.getElementById('nextPage').addEventListener('click', () => changePage(1));
+            document.getElementById('closeDownloadModal').addEventListener('click', () => {
+                downloadModal.classList.remove('active');
+            });
+        });
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // =============================================================================
+        // AUTH
+        // =============================================================================
+        async function checkAuth() {
+            try {
+                const response = await fetch('/auth/me', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    setLoggedIn(data.user);
+                } else {
+                    showLoginModal();
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                showLoginModal();
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!username || !password) {
+                showLoginError('Please enter both username and password');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.classList.add('btn-loading');
+            hideLoginError();
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.ok) {
+                    setLoggedIn(data.user);
+                    hideLoginModal();
+                    loginForm.reset();
+                } else {
+                    showLoginError(data.error || 'Invalid credentials');
+                }
+            } catch (error) {
+                showLoginError('Unable to connect to server');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.classList.remove('btn-loading');
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            currentUser = null;
+            showLoginModal();
+        }
+
+        function setLoggedIn(user) {
+            currentUser = user;
+            hideLoginModal();
+
+            // Update UI
+            document.getElementById('sidebarAvatar').textContent = (user.name || user.username).charAt(0).toUpperCase();
+            document.getElementById('sidebarUserName').textContent = user.name || user.username;
+            document.getElementById('sidebarUserRole').textContent = user.isAdmin ? 'Administrator' : 'Staff';
+
+            // Show admin sections
+            if (user.isAdmin) {
+                document.getElementById('adminSection').style.display = 'block';
+                loadPendingCount();
+            }
+
+            // Load reports
+            loadReports();
+        }
+
+        function showLoginModal() {
+            loginModal.classList.add('active');
+            document.getElementById('loginUsername').focus();
+        }
+
+        function hideLoginModal() {
+            loginModal.classList.remove('active');
+        }
+
+        function showLoginError(message) {
+            loginError.textContent = message;
+            loginError.style.display = 'block';
+        }
+
+        function hideLoginError() {
+            loginError.style.display = 'none';
+        }
+
+        // =============================================================================
+        // REPORTS DATA
+        // =============================================================================
+        async function loadReports() {
+            try {
+                const response = await fetch('/api/reports', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    reports = data.reports || [];
+                    filteredReports = [...reports];
+                    updateStats();
+                    renderTable();
+                } else {
+                    reports = [];
+                    filteredReports = [];
+                    renderTable();
+                }
+            } catch (error) {
+                console.error('Failed to load reports:', error);
+                reports = [];
+                filteredReports = [];
+                renderTable();
+            }
+        }
+
+        function updateStats() {
+            const siteCount = filteredReports.filter(r => r.workType === 'Site').length;
+            const officeCount = filteredReports.filter(r => r.workType === 'Office').length;
+            const now = new Date();
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const monthCount = filteredReports.filter(r => new Date(r.date) >= monthStart).length;
+
+            document.getElementById('statTotal').textContent = filteredReports.length;
+            document.getElementById('statSite').textContent = siteCount;
+            document.getElementById('statOffice').textContent = officeCount;
+            document.getElementById('statMonth').textContent = monthCount;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('reportsTableBody');
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageReports = filteredReports.slice(start, end);
+
+            if (pageReports.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8">
+                            <div class="empty-state" style="padding: 60px;">
+                                <div class="empty-state-icon">&#128203;</div>
+                                <div class="empty-state-title">No Reports Found</div>
+                                <div class="empty-state-description">
+                                    ${reports.length === 0
+                                        ? 'Create your first job order to see reports here.'
+                                        : 'No reports match your current filters. Try adjusting the filters.'}
+                                </div>
+                                ${reports.length === 0
+                                    ? '<a href="/" class="btn btn-primary">Create Job Order</a>'
+                                    : '<button class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>'}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = pageReports.map(report => `
+                    <tr>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <div class="avatar avatar-sm" style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);">
+                                    #
+                                </div>
+                                <strong>${report.jobNo}</strong>
+                            </div>
+                        </td>
+                        <td>${formatDate(report.date)}</td>
+                        <td>
+                            <span class="badge badge-neutral">${report.department || 'General'}</span>
+                        </td>
+                        <td>
+                            <span class="badge ${report.workType === 'Site' ? 'badge-success' : 'badge-info'}">
+                                ${report.workType || 'N/A'}
+                            </span>
+                        </td>
+                        <td>${report.engineer || '-'}</td>
+                        <td>${report.duration || '-'}</td>
+                        <td>
+                            <span class="badge badge-success">Completed</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-ghost btn-sm" onclick="downloadReport('${report.jobNo}', '${report.fileName}')">
+                                &#11015; Download
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            // Update pagination
+            const totalPages = Math.ceil(filteredReports.length / pageSize);
+            document.getElementById('paginationInfo').innerHTML =
+                `Showing <strong>${start + 1}-${Math.min(end, filteredReports.length)}</strong> of <strong>${filteredReports.length}</strong> reports`;
+            document.getElementById('prevPage').disabled = currentPage <= 1;
+            document.getElementById('nextPage').disabled = currentPage >= totalPages;
+            document.getElementById('resultsCount').innerHTML = `Showing <strong>${filteredReports.length}</strong> reports`;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            renderTable();
+        }
+
+        // =============================================================================
+        // FILTERS
+        // =============================================================================
+        function applyFilters() {
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+            const department = document.getElementById('filterDepartment').value;
+            const workType = document.getElementById('filterWorkType').value;
+
+            filteredReports = reports.filter(report => {
+                if (dateFrom && new Date(report.date) < new Date(dateFrom)) return false;
+                if (dateTo && new Date(report.date) > new Date(dateTo)) return false;
+                if (department && report.department !== department) return false;
+                if (workType && report.workType !== workType) return false;
+                return true;
+            });
+
+            currentPage = 1;
+            updateStats();
+            renderTable();
+            showToast(`Found ${filteredReports.length} reports`);
+        }
+
+        function clearFilters() {
+            document.getElementById('filterDateFrom').value = '';
+            document.getElementById('filterDateTo').value = '';
+            document.getElementById('filterDepartment').value = '';
+            document.getElementById('filterWorkType').value = '';
+            document.getElementById('searchInput').value = '';
+
+            filteredReports = [...reports];
+            currentPage = 1;
+            updateStats();
+            renderTable();
+        }
+
+        function handleSearch(e) {
+            const query = e.target.value.toLowerCase().trim();
+
+            if (!query) {
+                applyFilters();
+                return;
+            }
+
+            filteredReports = reports.filter(report => {
+                return report.jobNo.toString().includes(query) ||
+                       (report.department && report.department.toLowerCase().includes(query)) ||
+                       (report.engineer && report.engineer.toLowerCase().includes(query));
+            });
+
+            currentPage = 1;
+            updateStats();
+            renderTable();
+        }
+
+        // =============================================================================
+        // EXPORT & DOWNLOAD
+        // =============================================================================
+        function exportToExcel() {
+            if (filteredReports.length === 0) {
+                showToast('No reports to export', 'warning');
+                return;
+            }
+
+            // Create CSV content
+            const headers = ['Job #', 'Date', 'Department', 'Work Type', 'Engineer', 'Duration', 'Status'];
+            const rows = filteredReports.map(r => [
+                r.jobNo,
+                r.date,
+                r.department || '',
+                r.workType || '',
+                r.engineer || '',
+                r.duration || '',
+                'Completed'
+            ]);
+
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => {
+                csv += row.map(cell => `"${cell}"`).join(',') + '\n';
+            });
+
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `job_orders_report_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast(`Exported ${filteredReports.length} reports to CSV`);
+        }
+
+        function downloadReport(jobNo, fileName) {
+            const file = fileName || `Job_${jobNo}.xlsx`;
+            document.getElementById('downloadFileName').textContent = file;
+            document.getElementById('downloadLink').href = `/Generated_Reports/${file}`;
+            downloadModal.classList.add('active');
+        }
+
+        // =============================================================================
+        // HELPERS
+        // =============================================================================
+        async function loadPendingCount() {
+            try {
+                const response = await fetch('/api/admin/pending-signatures', { credentials: 'include' });
+                const data = await response.json();
+                const count = data.signatures?.length || 0;
+                const badge = document.getElementById('pendingBadge');
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Failed to load pending count');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '&#9989;' : type === 'error' ? '&#10060;' : '&#9888;'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'toastSlideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

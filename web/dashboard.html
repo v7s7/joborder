@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Job Order Management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/dashboard.html" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">JO</div>
+                    <div>
+                        <div class="sidebar-logo-text">Job Orders</div>
+                        <div class="sidebar-logo-subtitle">Management System</div>
+                    </div>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main Menu</div>
+                    <a href="/dashboard.html" class="nav-item active">
+                        <span class="nav-item-icon">&#128200;</span>
+                        Dashboard
+                    </a>
+                    <a href="/" class="nav-item">
+                        <span class="nav-item-icon">&#128221;</span>
+                        New Job Order
+                    </a>
+                    <a href="/reports.html" class="nav-item">
+                        <span class="nav-item-icon">&#128202;</span>
+                        Reports
+                    </a>
+                </div>
+
+                <div class="nav-section" id="adminSection" style="display: none;">
+                    <div class="nav-section-title">Administration</div>
+                    <a href="/admin.html" class="nav-item">
+                        <span class="nav-item-icon">&#9999;</span>
+                        Signatures
+                        <span class="nav-item-badge" id="pendingBadge" style="display: none;">0</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user" id="sidebarUser">
+                    <div class="sidebar-user-avatar" id="sidebarAvatar">U</div>
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name" id="sidebarUserName">User</div>
+                        <div class="sidebar-user-role" id="sidebarUserRole">Staff</div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-full mt-2" id="logoutBtn" style="justify-content: flex-start; gap: 12px;">
+                    <span>&#128682;</span> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="icon-btn mobile-menu-toggle" id="menuToggle" style="display: none;">
+                        &#9776;
+                    </button>
+                    <div>
+                        <h1 class="page-title">Dashboard</h1>
+                        <div class="breadcrumb">
+                            <span>Home</span>
+                            <span class="breadcrumb-separator">/</span>
+                            <span>Dashboard</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="status-indicator ready" id="statusIndicator">
+                        <span class="status-dot"></span>
+                        <span id="statusText">System Ready</span>
+                    </div>
+                    <div id="currentDate" class="text-secondary text-sm"></div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content">
+                <!-- Welcome Section -->
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold" style="font-size: 1.5rem; margin-bottom: 4px;">
+                        Welcome back, <span id="welcomeName">User</span>!
+                    </h2>
+                    <p class="text-secondary">Here's what's happening with your job orders today.</p>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card" style="--stat-color: var(--primary);">
+                        <div class="stat-card-icon primary">&#128221;</div>
+                        <div class="stat-card-content">
+                            <div class="stat-card-title">Total Job Orders</div>
+                            <div class="stat-card-value" id="totalOrders">0</div>
+                            <div class="stat-card-change positive" id="ordersChange">
+                                <span>&#8593;</span> +0 this month
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" style="--stat-color: var(--success);">
+                        <div class="stat-card-icon success">&#9989;</div>
+                        <div class="stat-card-content">
+                            <div class="stat-card-title">Completed</div>
+                            <div class="stat-card-value" id="completedOrders">0</div>
+                            <div class="stat-card-change positive">
+                                <span>&#8593;</span> 100% success
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" style="--stat-color: var(--warning);">
+                        <div class="stat-card-icon warning">&#9999;</div>
+                        <div class="stat-card-content">
+                            <div class="stat-card-title">Active Signatures</div>
+                            <div class="stat-card-value" id="activeSignatures">0</div>
+                            <div class="stat-card-change positive" id="signaturesChange">
+                                <span>&#8593;</span> All approved
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" style="--stat-color: var(--info);">
+                        <div class="stat-card-icon info">&#128197;</div>
+                        <div class="stat-card-content">
+                            <div class="stat-card-title">This Month</div>
+                            <div class="stat-card-value" id="monthlyOrders">0</div>
+                            <div class="stat-card-change positive" id="monthlyChange">
+                                <span>&#8593;</span> On track
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-2 gap-4 mb-6" style="grid-template-columns: 2fr 1fr;">
+                    <!-- Job Orders Chart -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-title-icon">&#128200;</span>
+                                Job Orders Overview
+                            </div>
+                            <select class="form-select" style="width: auto;" id="chartPeriod">
+                                <option value="7">Last 7 days</option>
+                                <option value="30" selected>Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="ordersChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Department Distribution -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-title-icon">&#128202;</span>
+                                By Department
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container" style="height: 250px;">
+                                <canvas id="departmentChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Row -->
+                <div class="grid grid-cols-2 gap-4" style="grid-template-columns: 1fr 1fr;">
+                    <!-- Recent Job Orders -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-title-icon">&#128203;</span>
+                                Recent Job Orders
+                            </div>
+                            <a href="/reports.html" class="btn btn-ghost btn-sm">View All</a>
+                        </div>
+                        <div class="card-body" style="padding: 0;">
+                            <div id="recentOrders">
+                                <div class="empty-state" style="padding: 40px;">
+                                    <div class="spinner"></div>
+                                    <p class="loading-text">Loading recent orders...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-title-icon">&#9889;</span>
+                                Quick Actions
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="flex flex-col gap-4">
+                                <a href="/" class="btn btn-primary btn-lg btn-full">
+                                    <span>&#128221;</span> Create New Job Order
+                                </a>
+                                <a href="/reports.html" class="btn btn-secondary btn-lg btn-full">
+                                    <span>&#128202;</span> View All Reports
+                                </a>
+                                <a href="/admin.html" class="btn btn-secondary btn-lg btn-full" id="adminQuickAction" style="display: none;">
+                                    <span>&#9999;</span> Manage Signatures
+                                </a>
+                            </div>
+
+                            <!-- Activity Summary -->
+                            <div class="mt-6">
+                                <h4 class="section-header">Activity Summary</h4>
+                                <div class="flex flex-col gap-4">
+                                    <div>
+                                        <div class="flex justify-between mb-2">
+                                            <span class="text-sm text-secondary">Site Work</span>
+                                            <span class="text-sm font-semibold" id="sitePercent">0%</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar" id="siteProgress" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between mb-2">
+                                            <span class="text-sm text-secondary">Office Work</span>
+                                            <span class="text-sm font-semibold" id="officePercent">0%</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar success" id="officeProgress" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Login Required</h3>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary mb-4">Please sign in with your Active Directory credentials</p>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label class="form-label">Username or Email</label>
+                        <input type="text" class="form-input" id="loginUsername" placeholder="Enter your username..." required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="loginPassword" placeholder="Enter your password..." required>
+                    </div>
+                    <div class="alert alert-error" id="loginError" style="display: none;"></div>
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn">Sign In</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // =============================================================================
+        // STATE
+        // =============================================================================
+        let currentUser = null;
+        let ordersChart = null;
+        let departmentChart = null;
+
+        // =============================================================================
+        // DOM ELEMENTS
+        // =============================================================================
+        const loginModal = document.getElementById('loginModal');
+        const loginForm = document.getElementById('loginForm');
+        const loginError = document.getElementById('loginError');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        // =============================================================================
+        // INITIALIZATION
+        // =============================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDateTime();
+            setInterval(updateDateTime, 60000);
+            checkAuth();
+
+            // Event listeners
+            loginForm.addEventListener('submit', handleLogin);
+            logoutBtn.addEventListener('click', handleLogout);
+            document.getElementById('chartPeriod').addEventListener('change', loadDashboardData);
+        });
+
+        function updateDateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        // =============================================================================
+        // AUTH
+        // =============================================================================
+        async function checkAuth() {
+            try {
+                const response = await fetch('/auth/me', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    setLoggedIn(data.user);
+                } else {
+                    showLoginModal();
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                showLoginModal();
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!username || !password) {
+                showLoginError('Please enter both username and password');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.classList.add('btn-loading');
+            hideLoginError();
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.ok) {
+                    setLoggedIn(data.user);
+                    hideLoginModal();
+                    loginForm.reset();
+                } else {
+                    showLoginError(data.error || 'Invalid credentials');
+                }
+            } catch (error) {
+                showLoginError('Unable to connect to server');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.classList.remove('btn-loading');
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            currentUser = null;
+            showLoginModal();
+        }
+
+        function setLoggedIn(user) {
+            currentUser = user;
+            hideLoginModal();
+
+            // Update UI
+            document.getElementById('sidebarAvatar').textContent = (user.name || user.username).charAt(0).toUpperCase();
+            document.getElementById('sidebarUserName').textContent = user.name || user.username;
+            document.getElementById('sidebarUserRole').textContent = user.isAdmin ? 'Administrator' : 'Staff';
+            document.getElementById('welcomeName').textContent = (user.name || user.username).split(' ')[0];
+
+            // Show admin sections
+            if (user.isAdmin) {
+                document.getElementById('adminSection').style.display = 'block';
+                document.getElementById('adminQuickAction').style.display = 'flex';
+                loadPendingCount();
+            }
+
+            // Load dashboard data
+            loadDashboardData();
+        }
+
+        function showLoginModal() {
+            loginModal.classList.add('active');
+            document.getElementById('loginUsername').focus();
+        }
+
+        function hideLoginModal() {
+            loginModal.classList.remove('active');
+        }
+
+        function showLoginError(message) {
+            loginError.textContent = message;
+            loginError.style.display = 'block';
+        }
+
+        function hideLoginError() {
+            loginError.style.display = 'none';
+        }
+
+        // =============================================================================
+        // DASHBOARD DATA
+        // =============================================================================
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/dashboard/stats', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStats(data);
+                    updateCharts(data);
+                    updateRecentOrders(data.recentOrders);
+                    updateActivitySummary(data);
+                }
+            } catch (error) {
+                console.error('Failed to load dashboard data:', error);
+                // Show placeholder data
+                updateStats({ totalOrders: 0, completedOrders: 0, signatures: 0, monthlyOrders: 0 });
+            }
+        }
+
+        function updateStats(data) {
+            document.getElementById('totalOrders').textContent = data.totalOrders || 0;
+            document.getElementById('completedOrders').textContent = data.completedOrders || data.totalOrders || 0;
+            document.getElementById('activeSignatures').textContent = data.signatures || 0;
+            document.getElementById('monthlyOrders').textContent = data.monthlyOrders || 0;
+
+            if (data.monthlyOrders > 0) {
+                document.getElementById('ordersChange').innerHTML = `<span>&#8593;</span> +${data.monthlyOrders} this month`;
+            }
+        }
+
+        function updateCharts(data) {
+            // Orders Chart
+            const ordersCtx = document.getElementById('ordersChart').getContext('2d');
+
+            if (ordersChart) {
+                ordersChart.destroy();
+            }
+
+            const days = data.dailyOrders || generatePlaceholderData(30);
+
+            ordersChart = new Chart(ordersCtx, {
+                type: 'line',
+                data: {
+                    labels: days.map(d => d.date),
+                    datasets: [{
+                        label: 'Job Orders',
+                        data: days.map(d => d.count),
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#6366f1',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { maxTicksLimit: 7 }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+
+            // Department Chart
+            const deptCtx = document.getElementById('departmentChart').getContext('2d');
+
+            if (departmentChart) {
+                departmentChart.destroy();
+            }
+
+            const departments = data.departmentStats || [
+                { name: 'Design', count: 0 },
+                { name: 'Project', count: 0 },
+                { name: 'MEP', count: 0 },
+                { name: 'QS', count: 0 },
+                { name: 'Others', count: 0 }
+            ];
+
+            departmentChart = new Chart(deptCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: departments.map(d => d.name),
+                    datasets: [{
+                        data: departments.map(d => d.count),
+                        backgroundColor: [
+                            '#6366f1',
+                            '#10b981',
+                            '#f59e0b',
+                            '#3b82f6',
+                            '#8b5cf6',
+                            '#ec4899',
+                            '#14b8a6',
+                            '#f97316'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+
+        function generatePlaceholderData(days) {
+            const data = [];
+            const now = new Date();
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - i);
+                data.push({
+                    date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    count: 0
+                });
+            }
+            return data;
+        }
+
+        function updateRecentOrders(orders) {
+            const container = document.getElementById('recentOrders');
+
+            if (!orders || orders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="padding: 40px;">
+                        <div class="empty-state-icon">&#128203;</div>
+                        <div class="empty-state-title">No Job Orders Yet</div>
+                        <div class="empty-state-description">Create your first job order to see it here.</div>
+                        <a href="/" class="btn btn-primary">Create Job Order</a>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = orders.map(order => `
+                <div class="list-item">
+                    <div class="list-item-avatar">
+                        <div class="avatar" style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);">
+                            ${order.jobNo}
+                        </div>
+                    </div>
+                    <div class="list-item-content">
+                        <div class="list-item-title">Job #${order.jobNo}</div>
+                        <div class="list-item-subtitle">${order.department || 'General'} - ${order.date}</div>
+                    </div>
+                    <span class="badge badge-success">Completed</span>
+                </div>
+            `).join('');
+        }
+
+        function updateActivitySummary(data) {
+            const sitePercent = data.sitePercent || 50;
+            const officePercent = data.officePercent || 50;
+
+            document.getElementById('sitePercent').textContent = sitePercent + '%';
+            document.getElementById('officePercent').textContent = officePercent + '%';
+            document.getElementById('siteProgress').style.width = sitePercent + '%';
+            document.getElementById('officeProgress').style.width = officePercent + '%';
+        }
+
+        async function loadPendingCount() {
+            try {
+                const response = await fetch('/api/admin/pending-signatures', { credentials: 'include' });
+                const data = await response.json();
+                const count = data.signatures?.length || 0;
+                const badge = document.getElementById('pendingBadge');
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Failed to load pending count');
+            }
+        }
+
+        // =============================================================================
+        // TOAST NOTIFICATIONS
+        // =============================================================================
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '&#9989;' : type === 'error' ? '&#10060;' : '&#9888;'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'toastSlideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

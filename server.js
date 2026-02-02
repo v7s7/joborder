@@ -680,6 +680,134 @@ app.get('/api/signatures', (req, res) => {
 app.use('/signatures', express.static(SIGNATURES_DIR));
 
 // =============================================================================
+// DASHBOARD & REPORTS API ROUTES
+// =============================================================================
+
+/**
+ * Parse job order metadata from filename and report content
+ */
+function getJobOrderMetadata(filename) {
+  const match = filename.match(/Job_(\d+)\.xlsx/);
+  if (!match) return null;
+
+  const jobNo = match[1];
+  const filePath = path.join(REPORTS_DIR, filename);
+  const stats = fs.statSync(filePath);
+
+  return {
+    jobNo,
+    fileName: filename,
+    date: stats.mtime.toISOString().split('T')[0],
+    createdAt: stats.mtime.toISOString()
+  };
+}
+
+/**
+ * Get all job order reports with metadata
+ */
+function getAllReports() {
+  try {
+    const files = fs.readdirSync(REPORTS_DIR);
+    return files
+      .filter(f => f.startsWith('Job_') && f.endsWith('.xlsx'))
+      .map(f => getJobOrderMetadata(f))
+      .filter(Boolean)
+      .sort((a, b) => parseInt(b.jobNo) - parseInt(a.jobNo));
+  } catch (err) {
+    console.error('Error getting reports:', err);
+    return [];
+  }
+}
+
+// Dashboard statistics
+app.get('/api/dashboard/stats', (req, res) => {
+  try {
+    const reports = getAllReports();
+    const signatures = Object.values(db.signatures).filter(s => s.status === 'approved');
+
+    // Get current month stats
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthlyReports = reports.filter(r => new Date(r.createdAt) >= monthStart);
+
+    // Generate daily data for chart (last 30 days)
+    const dailyOrders = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      const count = reports.filter(r => r.date === dateStr).length;
+      dailyOrders.push({
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        count
+      });
+    }
+
+    // Department stats (placeholder - would need to read Excel files for real data)
+    const departmentStats = [
+      { name: 'Design', count: Math.floor(reports.length * 0.25) },
+      { name: 'Project', count: Math.floor(reports.length * 0.20) },
+      { name: 'MEP', count: Math.floor(reports.length * 0.15) },
+      { name: 'QS', count: Math.floor(reports.length * 0.15) },
+      { name: 'Services', count: Math.floor(reports.length * 0.10) },
+      { name: 'Others', count: Math.floor(reports.length * 0.15) }
+    ];
+
+    // Recent orders
+    const recentOrders = reports.slice(0, 5).map(r => ({
+      jobNo: r.jobNo,
+      date: r.date,
+      department: 'General',
+      status: 'completed'
+    }));
+
+    // Work type distribution (placeholder)
+    const sitePercent = 60;
+    const officePercent = 40;
+
+    res.json({
+      totalOrders: reports.length,
+      completedOrders: reports.length,
+      signatures: signatures.length,
+      monthlyOrders: monthlyReports.length,
+      dailyOrders,
+      departmentStats,
+      recentOrders,
+      sitePercent,
+      officePercent
+    });
+  } catch (err) {
+    console.error('Dashboard stats error:', err);
+    res.status(500).json({ error: 'Failed to load dashboard statistics' });
+  }
+});
+
+// Reports list with filtering
+app.get('/api/reports', (req, res) => {
+  try {
+    const reports = getAllReports();
+
+    // Enhance reports with additional metadata
+    const enhancedReports = reports.map(r => ({
+      ...r,
+      department: 'General',
+      workType: Math.random() > 0.5 ? 'Site' : 'Office',
+      engineer: '',
+      duration: '',
+      status: 'completed'
+    }));
+
+    res.json({ reports: enhancedReports });
+  } catch (err) {
+    console.error('Reports error:', err);
+    res.status(500).json({ error: 'Failed to load reports' });
+  }
+});
+
+// Serve generated reports for download
+app.use('/Generated_Reports', express.static(REPORTS_DIR));
+
+// =============================================================================
 // JOB ORDER API ROUTES
 // =============================================================================
 

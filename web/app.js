@@ -1,52 +1,136 @@
 // =============================================================================
-// AUTH STATE MANAGEMENT
+// JOB ORDER FORM - MAIN APPLICATION SCRIPT
 // =============================================================================
 
+// State
 let currentUser = null;
+let jobNo = null;
+let signatures = [];
 
 // DOM Elements
 const loginModal = document.getElementById('loginModal');
 const loginForm = document.getElementById('loginForm');
 const loginError = document.getElementById('loginError');
 const loginBtn = document.getElementById('loginBtn');
-const loginTrigger = document.getElementById('loginTrigger');
 const logoutBtn = document.getElementById('logoutBtn');
-const userInfo = document.getElementById('userInfo');
-const userName = document.getElementById('userName');
-const userAvatar = document.getElementById('userAvatar');
+const successModal = document.getElementById('successModal');
 const jobForm = document.getElementById('jobForm');
 
 // =============================================================================
-// AUTH FUNCTIONS
+// INITIALIZATION
 // =============================================================================
 
-/**
- * Check current auth status on page load
- */
+document.addEventListener('DOMContentLoaded', () => {
+    initializeApp();
+});
+
+async function initializeApp() {
+    // Set current date
+    updateCurrentDate();
+    setDefaultDate();
+
+    // Check authentication
+    await checkAuth();
+
+    // Setup event listeners
+    setupEventListeners();
+}
+
+function updateCurrentDate() {
+    const now = new Date();
+    const dateDisplay = document.getElementById('currentDate');
+    if (dateDisplay) {
+        dateDisplay.textContent = now.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+}
+
+function setDefaultDate() {
+    const today = new Date().toISOString().split('T')[0];
+    const mainDateInput = document.getElementById('main_date');
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+
+    if (mainDateInput && !mainDateInput.value) {
+        mainDateInput.value = today;
+    }
+    if (startDateInput && !startDateInput.value) {
+        startDateInput.value = today;
+    }
+    if (endDateInput && !endDateInput.value) {
+        endDateInput.value = today;
+    }
+}
+
+function setupEventListeners() {
+    // Login form
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+
+    // Logout button
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
+
+    // Job form
+    if (jobForm) {
+        jobForm.addEventListener('submit', handleSubmit);
+    }
+
+    // Success modal
+    const closeSuccessModal = document.getElementById('closeSuccessModal');
+    const createAnotherBtn = document.getElementById('createAnotherBtn');
+
+    if (closeSuccessModal) {
+        closeSuccessModal.addEventListener('click', () => {
+            successModal.classList.remove('active');
+        });
+    }
+
+    if (createAnotherBtn) {
+        createAnotherBtn.addEventListener('click', () => {
+            successModal.classList.remove('active');
+            resetForm();
+            loadJobNumber();
+        });
+    }
+
+    // Signature dropdowns
+    const adminSigSelect = document.getElementById('admin_signature');
+    const staffSigSelect = document.getElementById('staff_signature');
+
+    if (adminSigSelect) {
+        adminSigSelect.addEventListener('change', () => updateSignaturePreview('admin'));
+    }
+
+    if (staffSigSelect) {
+        staffSigSelect.addEventListener('change', () => updateSignaturePreview('staff'));
+    }
+}
+
+// =============================================================================
+// AUTHENTICATION
+// =============================================================================
+
 async function checkAuth() {
     try {
-        const response = await fetch('/auth/me', {
-            method: 'GET',
-            credentials: 'include'
-        });
-
+        const response = await fetch('/auth/me', { credentials: 'include' });
         if (response.ok) {
             const data = await response.json();
             setLoggedIn(data.user);
         } else {
-            setLoggedOut();
             showLoginModal();
         }
     } catch (error) {
         console.error('Auth check failed:', error);
-        setLoggedOut();
         showLoginModal();
     }
 }
 
-/**
- * Handle login form submission
- */
 async function handleLogin(e) {
     e.preventDefault();
 
@@ -58,7 +142,6 @@ async function handleLogin(e) {
         return;
     }
 
-    // Set loading state
     loginBtn.disabled = true;
     loginBtn.classList.add('btn-loading');
     hideLoginError();
@@ -66,9 +149,7 @@ async function handleLogin(e) {
     try {
         const response = await fetch('/auth/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({ username, password })
         });
@@ -79,193 +160,174 @@ async function handleLogin(e) {
             setLoggedIn(data.user);
             hideLoginModal();
             loginForm.reset();
-        } else if (response.status === 401) {
-            showLoginError('Invalid username or password');
-        } else if (response.status === 400) {
-            showLoginError(data.error || 'Please provide valid credentials');
+            showToast('Welcome back!', 'success');
         } else {
-            showLoginError(data.error || 'Login failed. Please try again.');
+            showLoginError(data.error || 'Invalid credentials');
         }
     } catch (error) {
-        console.error('Login error:', error);
-        showLoginError('Unable to connect to server. Please try again.');
+        showLoginError('Unable to connect to server');
     } finally {
         loginBtn.disabled = false;
         loginBtn.classList.remove('btn-loading');
     }
 }
 
-/**
- * Handle logout
- */
 async function handleLogout() {
     try {
-        await fetch('/auth/logout', {
-            method: 'POST',
-            credentials: 'include'
-        });
+        await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (error) {
         console.error('Logout error:', error);
     }
-
-    setLoggedOut();
+    currentUser = null;
     showLoginModal();
 }
 
-/**
- * Update UI for logged in state
- */
 function setLoggedIn(user) {
     currentUser = user;
+    hideLoginModal();
 
-    // Update user display
-    userName.textContent = user.name || user.username;
-    userAvatar.textContent = (user.name || user.username).charAt(0).toUpperCase();
+    // Update sidebar user info
+    const sidebarAvatar = document.getElementById('sidebarAvatar');
+    const sidebarUserName = document.getElementById('sidebarUserName');
+    const sidebarUserRole = document.getElementById('sidebarUserRole');
 
-    // Show/hide elements
-    userInfo.style.display = 'flex';
-    loginTrigger.style.display = 'none';
-
-    // Show admin link only for admins
-    const adminLink = document.getElementById('adminLink');
-    if (adminLink) {
-        adminLink.style.display = user.isAdmin ? 'inline-block' : 'none';
+    if (sidebarAvatar) {
+        sidebarAvatar.textContent = (user.name || user.username).charAt(0).toUpperCase();
+    }
+    if (sidebarUserName) {
+        sidebarUserName.textContent = user.name || user.username;
+    }
+    if (sidebarUserRole) {
+        sidebarUserRole.textContent = user.isAdmin ? 'Administrator' : 'Staff';
     }
 
-    // Enable form
-    jobForm.classList.remove('form-disabled');
+    // Show admin section if applicable
+    const adminSection = document.getElementById('adminSection');
+    if (adminSection && user.isAdmin) {
+        adminSection.style.display = 'block';
+        loadPendingCount();
+    }
 
-    // Load signatures for dropdowns
+    // Load job number and signatures
+    loadJobNumber();
     loadSignatures();
 }
 
-/**
- * Update UI for logged out state
- */
-function setLoggedOut() {
-    currentUser = null;
-
-    // Show/hide elements
-    userInfo.style.display = 'none';
-    loginTrigger.style.display = 'block';
-
-    // Hide admin link
-    const adminLink = document.getElementById('adminLink');
-    if (adminLink) adminLink.style.display = 'none';
-
-    // Disable form
-    jobForm.classList.add('form-disabled');
-}
-
-/**
- * Show login modal
- */
 function showLoginModal() {
-    loginModal.classList.add('active');
-    document.getElementById('loginUsername').focus();
-}
-
-/**
- * Hide login modal
- */
-function hideLoginModal() {
-    loginModal.classList.remove('active');
-    hideLoginError();
-}
-
-/**
- * Show login error message
- */
-function showLoginError(message) {
-    loginError.textContent = message;
-    loginError.style.display = 'block';
-}
-
-/**
- * Hide login error message
- */
-function hideLoginError() {
-    loginError.style.display = 'none';
-}
-
-// =============================================================================
-// SIGNATURE FUNCTIONS
-// =============================================================================
-
-let signaturesData = [];
-
-/**
- * Load available signatures for dropdowns
- */
-async function loadSignatures() {
-    try {
-        const response = await fetch('/api/signatures', {
-            credentials: 'include'
-        });
-
-        if (!response.ok) return;
-
-        const data = await response.json();
-        signaturesData = data.signatures || [];
-
-        // Populate both dropdowns
-        const adminSelect = document.getElementById('admin_signature');
-        const staffSelect = document.getElementById('staff_signature');
-
-        if (adminSelect && staffSelect) {
-            const optionsHtml = signaturesData.map(sig =>
-                `<option value="${sig.userId}" data-url="${sig.signatureUrl}">${sig.name}</option>`
-            ).join('');
-
-            adminSelect.innerHTML = '<option value="">-- Select Signature --</option>' + optionsHtml;
-            staffSelect.innerHTML = '<option value="">-- Select Signature --</option>' + optionsHtml;
-
-            // Add change listeners for preview
-            adminSelect.addEventListener('change', () => updateSignaturePreview('admin'));
-            staffSelect.addEventListener('change', () => updateSignaturePreview('staff'));
+    if (loginModal) {
+        loginModal.classList.add('active');
+        const usernameInput = document.getElementById('loginUsername');
+        if (usernameInput) {
+            usernameInput.focus();
         }
-    } catch (error) {
-        console.error('Error loading signatures:', error);
     }
 }
 
-/**
- * Update signature preview when selection changes
- */
+function hideLoginModal() {
+    if (loginModal) {
+        loginModal.classList.remove('active');
+    }
+}
+
+function showLoginError(message) {
+    if (loginError) {
+        loginError.textContent = message;
+        loginError.style.display = 'block';
+    }
+}
+
+function hideLoginError() {
+    if (loginError) {
+        loginError.style.display = 'none';
+    }
+}
+
+// =============================================================================
+// JOB NUMBER
+// =============================================================================
+
+async function loadJobNumber() {
+    try {
+        const response = await fetch('/api/get-job-no', { credentials: 'include' });
+        const data = await response.json();
+        jobNo = data.job_no;
+
+        const jobDisplay = document.getElementById('job-number-display');
+        const currentJobNo = document.getElementById('currentJobNo');
+
+        if (jobDisplay) {
+            jobDisplay.textContent = jobNo;
+        }
+        if (currentJobNo) {
+            currentJobNo.textContent = jobNo;
+        }
+    } catch (error) {
+        console.error('Failed to load job number:', error);
+    }
+}
+
+// =============================================================================
+// SIGNATURES
+// =============================================================================
+
+async function loadSignatures() {
+    try {
+        const response = await fetch('/api/signatures', { credentials: 'include' });
+        const data = await response.json();
+        signatures = data.signatures || [];
+
+        populateSignatureDropdowns();
+    } catch (error) {
+        console.error('Failed to load signatures:', error);
+    }
+}
+
+function populateSignatureDropdowns() {
+    const adminSelect = document.getElementById('admin_signature');
+    const staffSelect = document.getElementById('staff_signature');
+
+    const defaultOption = '<option value="">-- Select Signature --</option>';
+    const options = signatures.map(sig =>
+        `<option value="${sig.userId}" data-url="${sig.signatureUrl}">${sig.name}</option>`
+    ).join('');
+
+    if (adminSelect) {
+        adminSelect.innerHTML = defaultOption + options;
+    }
+    if (staffSelect) {
+        staffSelect.innerHTML = defaultOption + options;
+    }
+}
+
 function updateSignaturePreview(type) {
     const select = document.getElementById(`${type}_signature`);
     const preview = document.getElementById(`${type}SigPreview`);
 
     if (!select || !preview) return;
 
-    const selectedOption = select.options[select.selectedIndex];
-    const url = selectedOption?.dataset?.url;
+    const userId = select.value;
 
-    if (url) {
-        preview.innerHTML = `<img src="${url}" alt="Signature preview">`;
-    } else {
+    if (!userId) {
         preview.innerHTML = '';
+        return;
+    }
+
+    const sig = signatures.find(s => s.userId === userId);
+    if (sig) {
+        preview.innerHTML = `<img src="${sig.signatureUrl}" alt="${sig.name}'s signature">`;
     }
 }
 
 // =============================================================================
-// JOB ORDER FUNCTIONS (Original)
+// FORM SUBMISSION
 // =============================================================================
 
-async function fetchJobNumber() {
-    try {
-        const response = await fetch('/api/get-job-no', {
-            credentials: 'include'
-        });
-        const data = await response.json();
-        document.getElementById('job-number-display').textContent = data.job_no;
-    } catch (error) {
-        console.error('Error fetching job number:', error);
-    }
-}
-
-async function handleGenerate(e) {
+async function handleSubmit(e) {
     e.preventDefault();
+
+    const submitBtn = document.getElementById('submitBtn');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const statusText = document.getElementById('statusText');
 
     // Check if logged in
     if (!currentUser) {
@@ -273,33 +335,44 @@ async function handleGenerate(e) {
         return;
     }
 
-    const btn = document.getElementById('submitBtn');
-    const statusText = document.getElementById('status-text');
-    const statusIndicator = document.getElementById('status-indicator');
+    // Validate required fields
+    const mainDate = document.getElementById('main_date');
+    if (!mainDate.value) {
+        showToast('Please enter the date of request', 'error');
+        mainDate.focus();
+        return;
+    }
 
-    // Set busy state
-    btn.disabled = true;
-    btn.textContent = "Processing...";
-    statusText.textContent = "GENERATING PDF...";
-    statusIndicator.className = "status-indicator processing";
+    // Update status
+    if (statusIndicator) {
+        statusIndicator.classList.remove('ready');
+        statusIndicator.classList.add('processing');
+    }
+    if (statusText) {
+        statusText.textContent = 'Processing...';
+    }
 
-    // Gather data
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
+    submitBtn.disabled = true;
+    submitBtn.classList.add('btn-loading');
+
+    // Collect form data
+    const formData = new FormData(jobForm);
+    const data = {};
+
+    for (const [key, value] of formData.entries()) {
+        data[key] = value;
+    }
 
     try {
         const response = await fetch('/api/generate', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify(data),
+            body: JSON.stringify(data)
         });
 
         // Check if unauthorized
         if (response.status === 401) {
-            setLoggedOut();
             showLoginModal();
             return;
         }
@@ -307,30 +380,47 @@ async function handleGenerate(e) {
         const result = await response.json();
 
         if (result.success) {
-            alert('Success! Report Generated.\n' + result.file);
-            // Refresh job number for next one
-            fetchJobNumber();
+            showSuccessModal(result.job_no);
+            showToast(`Job order ${result.job_no} created successfully!`, 'success');
         } else {
-            alert('Error: ' + result.error);
+            showToast(result.error || 'Failed to generate report', 'error');
         }
-
     } catch (error) {
-        alert('System Error: ' + error);
+        console.error('Submit error:', error);
+        showToast('Failed to submit. Please try again.', 'error');
     } finally {
-        // Reset state
-        btn.disabled = false;
-        btn.textContent = "Generate PDF Report";
-        statusText.textContent = "READY";
-        statusIndicator.className = "status-indicator ready";
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('btn-loading');
+
+        if (statusIndicator) {
+            statusIndicator.classList.remove('processing');
+            statusIndicator.classList.add('ready');
+        }
+        if (statusText) {
+            statusText.textContent = 'Ready';
+        }
     }
 }
 
+function showSuccessModal(jobNumber) {
+    if (successModal) {
+        const successMessage = document.getElementById('successMessage');
+        if (successMessage) {
+            successMessage.textContent = `Job Order #${jobNumber} has been generated successfully.`;
+        }
+        successModal.classList.add('active');
+    }
+}
+
+// =============================================================================
+// FORM UTILITIES
+// =============================================================================
+
 function resetForm() {
-    document.getElementById('jobForm').reset();
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('main_date').value = today;
-    document.getElementById('start_date').value = today;
-    document.getElementById('end_date').value = today;
+    if (jobForm) {
+        jobForm.reset();
+    }
+    setDefaultDate();
 
     // Clear signature previews
     const adminPreview = document.getElementById('adminSigPreview');
@@ -340,43 +430,61 @@ function resetForm() {
 }
 
 function clearDuration() {
-    const radios = document.querySelectorAll('.duration-section input[type="radio"]');
-    radios.forEach(radio => radio.checked = false);
+    const durationInputs = document.querySelectorAll('input[name^="duration_"]');
+    durationInputs.forEach(input => {
+        input.checked = false;
+    });
+}
+
+// Make functions available globally for onclick
+window.clearDuration = clearDuration;
+window.resetForm = resetForm;
+
+// =============================================================================
+// ADMIN FUNCTIONS
+// =============================================================================
+
+async function loadPendingCount() {
+    try {
+        const response = await fetch('/api/admin/pending-signatures', { credentials: 'include' });
+        const data = await response.json();
+        const count = data.signatures?.length || 0;
+
+        const badge = document.getElementById('pendingBadge');
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load pending count:', error);
+    }
 }
 
 // =============================================================================
-// INITIALIZATION
+// TOAST NOTIFICATIONS
 // =============================================================================
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Set default dates
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('main_date').value = today;
-    document.getElementById('start_date').value = today;
-    document.getElementById('end_date').value = today;
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
 
-    // Set current date in header
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' };
-    document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', options);
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
 
-    // Fetch next job number
-    fetchJobNumber();
+    const icon = type === 'success' ? '&#9989;' : type === 'error' ? '&#10060;' : '&#9888;';
+    toast.innerHTML = `
+        <span>${icon}</span>
+        <span>${message}</span>
+    `;
 
-    // Handle form submission
-    document.getElementById('jobForm').addEventListener('submit', handleGenerate);
+    container.appendChild(toast);
 
-    // Auth event listeners
-    loginForm.addEventListener('submit', handleLogin);
-    logoutBtn.addEventListener('click', handleLogout);
-    loginTrigger.addEventListener('click', showLoginModal);
-
-    // Close modal on backdrop click
-    loginModal.addEventListener('click', (e) => {
-        if (e.target === loginModal && currentUser) {
-            hideLoginModal();
-        }
-    });
-
-    // Check auth status
-    checkAuth();
-});
+    setTimeout(() => {
+        toast.style.animation = 'toastSlideIn 0.3s ease reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
