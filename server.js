@@ -1206,23 +1206,22 @@ app.post('/api/approvals/:token/generate', leaderGuard, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to generate this report' });
     }
 
-    // Forward to generate endpoint with approved signature
     const reportData = {
       ...approval.reportData,
       staff_signature: approval.staffUserId,
       _approvalToken: token
     };
 
-    // Set request body and call generate handler internally
-    req.body = reportData;
-    req.approvalToken = token;
+    const { jobNo, outputPath } = await generateJobOrderReport(reportData);
 
-    // We'll handle this in the generate endpoint
+    approval.generatedAt = new Date().toISOString();
+    saveDatabase(db);
+
     res.json({
       success: true,
-      redirect: true,
-      reportData: reportData,
-      message: 'Ready to generate report'
+      file: outputPath,
+      job_no: jobNo,
+      message: `Job order ${jobNo} generated successfully`
     });
   } catch (err) {
     console.error('Generate from approval error:', err);
@@ -1288,6 +1287,112 @@ function formatDate(dateStr) {
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
+async function generateJobOrderReport(data) {
+  const jobNo = getNextJobNo();
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(TEMPLATE_FILE);
+  const ws = workbook.getWorksheet(1);
+
+  // Write job number
+  ws.getCell(JOB_NO_CELL).value = jobNo;
+
+  // Write direct cell mappings
+  for (const [field, cell] of Object.entries(CELL_MAP)) {
+    if (data[field]) {
+      ws.getCell(cell).value = data[field];
+    }
+  }
+
+  // Write dates
+  for (const [field, cell] of Object.entries(DATE_MAP)) {
+    if (data[field]) {
+      const formattedDate = formatDate(data[field]);
+      const currentCell = ws.getCell(cell);
+
+      if (field === 'end_date') {
+        const existing = currentCell.value || '';
+        const label = typeof existing === 'string' ? existing.split(':')[0] + ':' : '';
+        currentCell.value = label ? `${label} ${formattedDate}` : formattedDate;
+      } else {
+        currentCell.value = formattedDate;
+      }
+    }
+  }
+
+  // Write labeled fields
+  for (const [field, cell] of Object.entries(LABELED_FIELDS)) {
+    if (data[field]) {
+      const currentCell = ws.getCell(cell);
+      const existing = currentCell.value || '';
+      const existingStr = typeof existing === 'string' ? existing : String(existing);
+      currentCell.value = existingStr ? `${existingStr} ${data[field]}` : data[field];
+    }
+  }
+
+  // Handle duration highlighting
+  const durationFields = ['duration_days', 'duration_weeks', 'duration_months', 'duration_years'];
+  for (const field of durationFields) {
+    const value = data[field];
+    if (value) {
+      const category = field.replace('duration_', '');
+      const cellAddr = DURATION_MAPPING[category]?.[value];
+      if (cellAddr) {
+        const cell = ws.getCell(cellAddr);
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFFF00' }
+        };
+      }
+    }
+  }
+
+  // Add signatures as images - stretch to fit merged cell dimensions
+  // E13:I13 is merged (cols 4-8), N13:T13 is merged (cols 13-19)
+  if (data.admin_signature) {
+    const sig = db.signatures[data.admin_signature.toLowerCase()];
+    if (sig && sig.status === 'approved') {
+      const imagePath = path.join(SIGNATURES_DIR, sig.filename);
+      if (fs.existsSync(imagePath)) {
+        const imageId = workbook.addImage({
+          filename: imagePath,
+          extension: 'png'
+        });
+        // E13:I13 merged cell - stretch from col E (4) to end of col I (9)
+        ws.addImage(imageId, {
+          tl: { col: 4, row: 12 },
+          br: { col: 9, row: 13 },
+          editAs: 'twoCell'
+        });
+      }
+    }
+  }
+
+  if (data.staff_signature) {
+    const sig = db.signatures[data.staff_signature.toLowerCase()];
+    if (sig && sig.status === 'approved') {
+      const imagePath = path.join(SIGNATURES_DIR, sig.filename);
+      if (fs.existsSync(imagePath)) {
+        const imageId = workbook.addImage({
+          filename: imagePath,
+          extension: 'png'
+        });
+        // N13:T13 merged cell - stretch from col N (13) to end of col T (20)
+        ws.addImage(imageId, {
+          tl: { col: 13, row: 12 },
+          br: { col: 20, row: 13 },
+          editAs: 'twoCell'
+        });
+      }
+    }
+  }
+
+  const outputPath = path.join(REPORTS_DIR, `Job_${jobNo}.xlsx`);
+  await workbook.xlsx.writeFile(outputPath);
+
+  return { jobNo, outputPath };
+}
+
 app.get('/api/get-job-no', (req, res) => {
   const jobNo = getNextJobNo();
   res.json({ job_no: jobNo });
@@ -1296,109 +1401,7 @@ app.get('/api/get-job-no', (req, res) => {
 app.post('/api/generate', leaderGuard, async (req, res) => {
   try {
     const data = req.body;
-    const jobNo = getNextJobNo();
-
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(TEMPLATE_FILE);
-    const ws = workbook.getWorksheet(1);
-
-    // Write job number
-    ws.getCell(JOB_NO_CELL).value = jobNo;
-
-    // Write direct cell mappings
-    for (const [field, cell] of Object.entries(CELL_MAP)) {
-      if (data[field]) {
-        ws.getCell(cell).value = data[field];
-      }
-    }
-
-    // Write dates
-    for (const [field, cell] of Object.entries(DATE_MAP)) {
-      if (data[field]) {
-        const formattedDate = formatDate(data[field]);
-        const currentCell = ws.getCell(cell);
-
-        if (field === 'end_date') {
-          const existing = currentCell.value || '';
-          const label = typeof existing === 'string' ? existing.split(':')[0] + ':' : '';
-          currentCell.value = label ? `${label} ${formattedDate}` : formattedDate;
-        } else {
-          currentCell.value = formattedDate;
-        }
-      }
-    }
-
-    // Write labeled fields
-    for (const [field, cell] of Object.entries(LABELED_FIELDS)) {
-      if (data[field]) {
-        const currentCell = ws.getCell(cell);
-        const existing = currentCell.value || '';
-        const existingStr = typeof existing === 'string' ? existing : String(existing);
-        currentCell.value = existingStr ? `${existingStr} ${data[field]}` : data[field];
-      }
-    }
-
-    // Handle duration highlighting
-    const durationFields = ['duration_days', 'duration_weeks', 'duration_months', 'duration_years'];
-    for (const field of durationFields) {
-      const value = data[field];
-      if (value) {
-        const category = field.replace('duration_', '');
-        const cellAddr = DURATION_MAPPING[category]?.[value];
-        if (cellAddr) {
-          const cell = ws.getCell(cellAddr);
-          cell.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFFFFF00' }
-          };
-        }
-      }
-    }
-
-    // Add signatures as images - stretch to fit merged cell dimensions
-    // E13:I13 is merged (cols 4-8), N13:T13 is merged (cols 13-19)
-    if (data.admin_signature) {
-      const sig = db.signatures[data.admin_signature.toLowerCase()];
-      if (sig && sig.status === 'approved') {
-        const imagePath = path.join(SIGNATURES_DIR, sig.filename);
-        if (fs.existsSync(imagePath)) {
-          const imageId = workbook.addImage({
-            filename: imagePath,
-            extension: 'png'
-          });
-          // E13:I13 merged cell - stretch from col E (4) to end of col I (9)
-          ws.addImage(imageId, {
-            tl: { col: 4, row: 12 },
-            br: { col: 9, row: 13 },
-            editAs: 'twoCell'
-          });
-        }
-      }
-    }
-
-    if (data.staff_signature) {
-      const sig = db.signatures[data.staff_signature.toLowerCase()];
-      if (sig && sig.status === 'approved') {
-        const imagePath = path.join(SIGNATURES_DIR, sig.filename);
-        if (fs.existsSync(imagePath)) {
-          const imageId = workbook.addImage({
-            filename: imagePath,
-            extension: 'png'
-          });
-          // N13:T13 merged cell - stretch from col N (13) to end of col T (20)
-          ws.addImage(imageId, {
-            tl: { col: 13, row: 12 },
-            br: { col: 20, row: 13 },
-            editAs: 'twoCell'
-          });
-        }
-      }
-    }
-
-    // Save the workbook
-    const outputPath = path.join(REPORTS_DIR, `Job_${jobNo}.xlsx`);
-    await workbook.xlsx.writeFile(outputPath);
+    const { jobNo, outputPath } = await generateJobOrderReport(data);
 
     res.json({
       success: true,

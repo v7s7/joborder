@@ -24,19 +24,15 @@
                 <div class="nav-section">
                     <div class="nav-section-title">Main Menu</div>
                     <a href="/dashboard.html" class="nav-item">
-                        <span class="nav-item-icon">&#128200;</span>
                         Dashboard
                     </a>
                     <a href="/" class="nav-item">
-                        <span class="nav-item-icon">&#128221;</span>
                         New Job Order
                     </a>
                     <a href="/reports.html" class="nav-item">
-                        <span class="nav-item-icon">&#128202;</span>
                         Reports
                     </a>
                     <a href="/pending-approvals.html" class="nav-item">
-                        <span class="nav-item-icon">&#128338;</span>
                         Pending Approvals
                         <span class="nav-item-badge" id="approvalsBadge" style="display: none;">0</span>
                     </a>
@@ -45,7 +41,6 @@
                 <div class="nav-section">
                     <div class="nav-section-title">Administration</div>
                     <a href="/admin.html" class="nav-item active">
-                        <span class="nav-item-icon">&#9999;</span>
                         Signatures
                         <span class="nav-item-badge" id="pendingBadgeSidebar" style="display: none;">0</span>
                     </a>
@@ -61,7 +56,7 @@
                     </div>
                 </div>
                 <button class="btn btn-ghost btn-full mt-2" id="logoutBtn" style="justify-content: flex-start; gap: 12px;">
-                    <span>&#128682;</span> Logout
+                    Logout
                 </button>
             </div>
         </aside>
@@ -71,9 +66,7 @@
             <!-- Top Bar -->
             <header class="top-bar">
                 <div class="top-bar-left">
-                    <button class="icon-btn mobile-menu-toggle" id="menuToggle" style="display: none;">
-                        &#9776;
-                    </button>
+                    <button class="icon-btn mobile-menu-toggle" id="menuToggle" style="display: none;">Menu</button>
                     <div>
                         <h1 class="page-title">Signature Management</h1>
                         <div class="breadcrumb">
@@ -98,21 +91,21 @@
                 <!-- Stats Grid -->
                 <div class="stats-grid mb-6" style="grid-template-columns: repeat(3, 1fr);">
                     <div class="stat-card" style="--stat-color: var(--success);">
-                        <div class="stat-card-icon success">&#9989;</div>
+                        <div class="stat-card-icon success"></div>
                         <div class="stat-card-content">
                             <div class="stat-card-title">Approved Signatures</div>
                             <div class="stat-card-value" id="statApproved">0</div>
                         </div>
                     </div>
                     <div class="stat-card" style="--stat-color: var(--warning);">
-                        <div class="stat-card-icon warning">&#9200;</div>
+                        <div class="stat-card-icon warning"></div>
                         <div class="stat-card-content">
                             <div class="stat-card-title">Pending Approval</div>
                             <div class="stat-card-value" id="statPending">0</div>
                         </div>
                     </div>
                     <div class="stat-card" style="--stat-color: var(--info);">
-                        <div class="stat-card-icon info">&#128231;</div>
+                        <div class="stat-card-icon info"></div>
                         <div class="stat-card-content">
                             <div class="stat-card-title">Invitations Sent</div>
                             <div class="stat-card-value" id="statInvitations">0</div>
@@ -125,14 +118,14 @@
                     <!-- Tabs -->
                     <div class="tabs" style="padding: 0 24px; margin-bottom: 0; border-bottom: 2px solid var(--border-light);">
                         <button class="tab active" data-tab="invite">
-                            <span>&#128269;</span> Invite Staff
+                            Invite Staff
                         </button>
                         <button class="tab" data-tab="pending">
-                            <span>&#9200;</span> Pending Approval
+                            Pending Approval
                             <span class="tab-badge" id="pendingBadge" style="display: none;">0</span>
                         </button>
                         <button class="tab" data-tab="all">
-                            <span>&#9989;</span> All Signatures
+                            All Signatures
                         </button>
                     </div>
 
@@ -148,13 +141,13 @@
                             <div class="search-box mb-6">
                                 <input type="text" class="form-input" id="searchInput" placeholder="Search by name or email (min. 2 characters)..." autocomplete="off">
                                 <button class="btn btn-primary" onclick="searchDirectory()">
-                                    <span>&#128269;</span> Search
+                                    Search
                                 </button>
                             </div>
 
                             <div id="searchResults">
                                 <div class="empty-state">
-                                    <div class="empty-state-icon">&#128269;</div>
+                                    <div class="empty-state-icon"></div>
                                     <div class="empty-state-title">Search Directory</div>
                                     <div class="empty-state-description">Enter a name or email address to search for staff members in Active Directory.</div>
                                 </div>
@@ -347,7 +340,7 @@
                 if (data.users.length === 0) {
                     resultsDiv.innerHTML = `
                         <div class="empty-state">
-                            <div class="empty-state-icon">&#128528;</div>
+                            <div class="empty-state-icon"></div>
                             <div class="empty-state-title">No Results Found</div>
                             <div class="empty-state-description">No users found matching "${query}". Try a different search term.</div>
                         </div>
@@ -370,7 +363,7 @@
                                 : user.signatureStatus === 'pending'
                                     ? '<span class="badge badge-warning">Pending</span>'
                                     : `<button class="btn btn-primary btn-sm" onclick="inviteUser('${user.email}', '${user.name}', '${user.username}')">
-                                        <span>&#128231;</span> Send Invite
+                                        Send Invite
                                        </button>`
                             }
                         </div>
@@ -380,7 +373,7 @@
             } catch (err) {
                 resultsDiv.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-state-icon">&#10060;</div>
+                        <div class="empty-state-icon"></div>
                         <div class="empty-state-title">Search Failed</div>
                         <div class="empty-state-description">Unable to search the directory. Please try again.</div>
                     </div>
@@ -429,7 +422,7 @@
                 if (data.signatures.length === 0) {
                     listDiv.innerHTML = `
                         <div class="empty-state">
-                            <div class="empty-state-icon">&#9989;</div>
+                            <div class="empty-state-icon"></div>
                             <div class="empty-state-title">All Caught Up!</div>
                             <div class="empty-state-description">There are no signatures pending approval.</div>
                         </div>
@@ -455,10 +448,10 @@
                                     </div>
                                     <div class="flex gap-2">
                                         <button class="btn btn-success btn-full" onclick="approveSignature('${sig.userId}')">
-                                            <span>&#9989;</span> Approve
+                                            Approve
                                         </button>
                                         <button class="btn btn-danger btn-full" onclick="rejectSignature('${sig.userId}')">
-                                            <span>&#10060;</span> Reject
+                                            Reject
                                         </button>
                                     </div>
                                 </div>
@@ -470,7 +463,7 @@
             } catch (err) {
                 listDiv.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-state-icon">&#10060;</div>
+                        <div class="empty-state-icon"></div>
                         <div class="empty-state-title">Failed to Load</div>
                         <div class="empty-state-description">Unable to load pending signatures.</div>
                     </div>
@@ -545,7 +538,7 @@
                 if (data.signatures.length === 0) {
                     listDiv.innerHTML = `
                         <div class="empty-state">
-                            <div class="empty-state-icon">&#9999;</div>
+                            <div class="empty-state-icon"></div>
                             <div class="empty-state-title">No Signatures Yet</div>
                             <div class="empty-state-description">Invite staff members to set up their digital signatures.</div>
                         </div>
@@ -572,7 +565,7 @@
             } catch (err) {
                 listDiv.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-state-icon">&#10060;</div>
+                        <div class="empty-state-icon"></div>
                         <div class="empty-state-title">Failed to Load</div>
                         <div class="empty-state-description">Unable to load signatures.</div>
                     </div>
@@ -588,7 +581,7 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerHTML = `
-                <span>${type === 'success' ? '&#9989;' : type === 'error' ? '&#10060;' : '&#9888;'}</span>
+                <span>${type === 'success' ? '' : type === 'error' ? '' : ''}</span>
                 <span>${message}</span>
             `;
             container.appendChild(toast);

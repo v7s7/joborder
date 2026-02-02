@@ -24,19 +24,15 @@
                 <div class="nav-section">
                     <div class="nav-section-title">Main Menu</div>
                     <a href="/dashboard.html" class="nav-item">
-                        <span class="nav-item-icon">&#128200;</span>
                         Dashboard
                     </a>
                     <a href="/" class="nav-item" id="newJobOrderNav">
-                        <span class="nav-item-icon">&#128221;</span>
                         New Job Order
                     </a>
                     <a href="/reports.html" class="nav-item active" id="reportsNav">
-                        <span class="nav-item-icon">&#128202;</span>
                         Reports
                     </a>
                     <a href="/pending-approvals.html" class="nav-item">
-                        <span class="nav-item-icon">&#128338;</span>
                         <span id="navApprovalLabel">Pending Approvals</span>
                         <span class="nav-item-badge" id="approvalsBadge" style="display: none;">0</span>
                     </a>
@@ -45,7 +41,6 @@
                 <div class="nav-section" id="adminSection" style="display: none;">
                     <div class="nav-section-title">Administration</div>
                     <a href="/admin.html" class="nav-item">
-                        <span class="nav-item-icon">&#9999;</span>
                         Signatures
                         <span class="nav-item-badge" id="pendingBadge" style="display: none;">0</span>
                     </a>
@@ -61,7 +56,7 @@
                     </div>
                 </div>
                 <button class="btn btn-ghost btn-full mt-2" id="logoutBtn" style="justify-content: flex-start; gap: 12px;">
-                    <span>&#128682;</span> Logout
+                    Logout
                 </button>
             </div>
         </aside>
@@ -71,9 +66,7 @@
             <!-- Top Bar -->
             <header class="top-bar">
                 <div class="top-bar-left">
-                    <button class="icon-btn mobile-menu-toggle" id="menuToggle" style="display: none;">
-                        &#9776;
-                    </button>
+                    <button class="icon-btn mobile-menu-toggle" id="menuToggle" style="display: none;">Menu</button>
                     <div>
                         <h1 class="page-title">Reports</h1>
                         <div class="breadcrumb">
@@ -107,7 +100,6 @@
                 <div class="card mb-6">
                     <div class="card-header">
                         <div class="card-title">
-                            <span class="card-title-icon">&#128269;</span>
                             Filter Reports
                         </div>
                         <button class="btn btn-ghost btn-sm" id="clearFilters">Clear Filters</button>
@@ -149,10 +141,10 @@
                         <div class="flex justify-between items-center mt-4" style="padding-top: 16px; border-top: 1px solid var(--border-light);">
                             <div class="flex gap-2">
                                 <button class="btn btn-primary" id="applyFilters">
-                                    <span>&#128269;</span> Apply Filters
+                                    Apply Filters
                                 </button>
                                 <button class="btn btn-secondary" id="exportExcel">
-                                    <span>&#128230;</span> Export to Excel
+                                    Export to Excel
                                 </button>
                             </div>
                             <div class="text-secondary text-sm" id="resultsCount">
@@ -165,28 +157,28 @@
                 <!-- Summary Stats -->
                 <div class="stats-grid mb-6" style="grid-template-columns: repeat(4, 1fr);">
                     <div class="stat-card" style="--stat-color: var(--primary);">
-                        <div class="stat-card-icon primary">&#128221;</div>
+                        <div class="stat-card-icon primary"></div>
                         <div class="stat-card-content">
                             <div class="stat-card-title">Total Reports</div>
                             <div class="stat-card-value" id="statTotal">0</div>
                         </div>
                     </div>
                     <div class="stat-card" style="--stat-color: var(--success);">
-                        <div class="stat-card-icon success">&#127959;</div>
+                        <div class="stat-card-icon success"></div>
                         <div class="stat-card-content">
                             <div class="stat-card-title">Site Work</div>
                             <div class="stat-card-value" id="statSite">0</div>
                         </div>
                     </div>
                     <div class="stat-card" style="--stat-color: var(--info);">
-                        <div class="stat-card-icon info">&#127970;</div>
+                        <div class="stat-card-icon info"></div>
                         <div class="stat-card-content">
                             <div class="stat-card-title">Office Work</div>
                             <div class="stat-card-value" id="statOffice">0</div>
                         </div>
                     </div>
                     <div class="stat-card" style="--stat-color: var(--warning);">
-                        <div class="stat-card-icon warning">&#128197;</div>
+                        <div class="stat-card-icon warning"></div>
                         <div class="stat-card-content">
                             <div class="stat-card-title">This Month</div>
                             <div class="stat-card-value" id="statMonth">0</div>
@@ -198,12 +190,11 @@
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">
-                            <span class="card-title-icon">&#128203;</span>
                             Job Order Reports
                         </div>
                         <div class="flex gap-2">
                             <div class="top-bar-search">
-                                <span class="top-bar-search-icon">&#128269;</span>
+                                <span class="top-bar-search-icon"></span>
                                 <input type="text" placeholder="Search by job number..." id="searchInput">
                             </div>
                         </div>
@@ -281,12 +272,12 @@
             </div>
             <div class="modal-body text-center">
                 <div class="mb-4">
-                    <div style="font-size: 48px; margin-bottom: 16px;">&#128230;</div>
+                    <div style="font-size: 48px; margin-bottom: 16px;"></div>
                     <h4 class="font-semibold mb-2" id="downloadFileName">Job_1001.xlsx</h4>
                     <p class="text-secondary text-sm">Click the button below to download your report.</p>
                 </div>
                 <a href="#" class="btn btn-primary btn-lg btn-full" id="downloadLink" download>
-                    <span>&#11015;</span> Download Excel File
+                    Download Excel File
                 </a>
             </div>
         </div>
@@ -528,7 +519,7 @@
                     <tr>
                         <td colspan="8">
                             <div class="empty-state" style="padding: 60px;">
-                                <div class="empty-state-icon">&#128203;</div>
+                                <div class="empty-state-icon"></div>
                                 <div class="empty-state-title">No Reports Found</div>
                                 <div class="empty-state-description">
                                     ${reports.length === 0
@@ -569,7 +560,7 @@
                         </td>
                         <td>
                             <button class="btn btn-ghost btn-sm" onclick="downloadReport('${report.jobNo}', '${report.fileName}')">
-                                &#11015; Download
+                                 Download
                             </button>
                         </td>
                     </tr>
@@ -747,7 +738,7 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerHTML = `
-                <span>${type === 'success' ? '&#9989;' : type === 'error' ? '&#10060;' : '&#9888;'}</span>
+                <span>${type === 'success' ? '' : type === 'error' ? '' : ''}</span>
                 <span>${message}</span>
             `;
             container.appendChild(toast);
