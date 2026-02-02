@@ -1329,20 +1329,27 @@ async function generateJobOrderReport(data) {
     }
   }
 
-  // Handle duration highlighting
+  // Handle duration highlighting (only one highlight per category)
   const durationFields = ['duration_days', 'duration_weeks', 'duration_months', 'duration_years'];
+  const highlightFill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFFFFF00' }
+  };
+
   for (const field of durationFields) {
     const value = data[field];
+    const category = field.replace('duration_', '');
+    const categoryMap = DURATION_MAPPING[category] || {};
+
+    Object.values(categoryMap).forEach((cellAddr) => {
+      ws.getCell(cellAddr).fill = null;
+    });
+
     if (value) {
-      const category = field.replace('duration_', '');
-      const cellAddr = DURATION_MAPPING[category]?.[value];
+      const cellAddr = categoryMap[value];
       if (cellAddr) {
-        const cell = ws.getCell(cellAddr);
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFFFFF00' }
-        };
+        ws.getCell(cellAddr).fill = highlightFill;
       }
     }
   }
