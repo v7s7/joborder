@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signature Approval - Job Order Management</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .review-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: var(--bg-primary);
+        }
+
+        .review-card {
+            width: 100%;
+            max-width: 560px;
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+        }
+
+        .review-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            padding: 32px;
+            text-align: center;
+            color: white;
+        }
+
+        .review-header-icon {
+            width: 64px;
+            height: 64px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 28px;
+        }
+
+        .review-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+        }
+
+        .review-header p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .review-body {
+            padding: 32px;
+        }
+
+        .info-section {
+            margin-bottom: 24px;
+        }
+
+        .info-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .info-item {
+            background: var(--bg-tertiary);
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+        }
+
+        .info-item-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .info-item-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .info-item.full {
+            grid-column: 1 / -1;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        .action-buttons .btn {
+            flex: 1;
+            padding: 14px 24px;
+            font-size: 15px;
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 48px 32px;
+        }
+
+        .status-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 36px;
+        }
+
+        .status-icon.success {
+            background: var(--success-light);
+            color: var(--success);
+        }
+
+        .status-icon.error {
+            background: var(--error-light);
+            color: var(--error);
+        }
+
+        .status-icon.warning {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+
+        .status-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .status-description {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 64px 32px;
+        }
+
+        .branding {
+            text-align: center;
+            padding: 24px;
+            border-top: 1px solid var(--border-light);
+            background: var(--bg-tertiary);
+        }
+
+        .branding-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .branding-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            color: white;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .branding-text {
+            text-align: left;
+        }
+
+        .branding-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .branding-subtitle {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="review-container">
+        <div class="review-card">
+            <!-- Loading State -->
+            <div id="loadingState" class="loading-state">
+                <div class="spinner" style="width: 48px; height: 48px; margin: 0 auto 16px;"></div>
+                <p class="text-secondary">Loading approval request...</p>
+            </div>
+
+            <!-- Content (hidden initially) -->
+            <div id="reviewContent" style="display: none;">
+                <div class="review-header">
+                    <div class="review-header-icon">&#9999;</div>
+                    <h1>Signature Approval Request</h1>
+                    <p id="headerSubtext">Review the details below and respond</p>
+                </div>
+
+                <div class="review-body" id="reviewBody">
+                    <!-- Will be populated by JS -->
+                </div>
+
+                <div class="branding">
+                    <div class="branding-logo">
+                        <div class="branding-icon">JO</div>
+                        <div class="branding-text">
+                            <div class="branding-title">Job Order Management</div>
+                            <div class="branding-subtitle">Digital Signature System</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" style="display: none;">
+                <div class="status-message">
+                    <div class="status-icon error">&#10060;</div>
+                    <div class="status-title" id="errorTitle">Error</div>
+                    <div class="status-description" id="errorDescription">Something went wrong.</div>
+                </div>
+                <div class="branding">
+                    <div class="branding-logo">
+                        <div class="branding-icon">JO</div>
+                        <div class="branding-text">
+                            <div class="branding-title">Job Order Management</div>
+                            <div class="branding-subtitle">Digital Signature System</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!token) {
+                showError('Invalid Request', 'No approval token provided. Please use the link from your email.');
+                return;
+            }
+            loadApproval();
+        });
+
+        async function loadApproval() {
+            try {
+                const res = await fetch(`/api/approvals/review/${token}`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    if (res.status === 410) {
+                        showError('Request Expired', 'This approval request has expired. Please contact the administrator for a new request.');
+                    } else if (res.status === 404) {
+                        showError('Not Found', 'This approval request was not found. It may have been deleted or already processed.');
+                    } else {
+                        showError('Error', data.error || 'Failed to load approval details.');
+                    }
+                    return;
+                }
+
+                renderApproval(data.approval);
+            } catch (err) {
+                showError('Connection Error', 'Unable to connect to the server. Please check your internet connection and try again.');
+            }
+        }
+
+        function renderApproval(approval) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('reviewContent').style.display = 'block';
+
+            const reportData = approval.reportData || {};
+            const createdDate = new Date(approval.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            // Check if already responded
+            if (approval.status !== 'pending') {
+                document.getElementById('headerSubtext').textContent =
+                    approval.status === 'approved' ? 'You have approved this request' : 'You have rejected this request';
+
+                document.getElementById('reviewBody').innerHTML = `
+                    <div class="status-message" style="padding: 24px 0;">
+                        <div class="status-icon ${approval.status === 'approved' ? 'success' : 'error'}">
+                            ${approval.status === 'approved' ? '&#9989;' : '&#10060;'}
+                        </div>
+                        <div class="status-title">
+                            ${approval.status === 'approved' ? 'Request Approved' : 'Request Rejected'}
+                        </div>
+                        <div class="status-description">
+                            ${approval.status === 'approved'
+                                ? 'Your signature will be included in the job order report.'
+                                : 'Your signature will not be used for this report.'}
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            document.getElementById('reviewBody').innerHTML = `
+                <div class="info-section">
+                    <div class="info-section-title">Request Details</div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-item-label">Requested By</div>
+                            <div class="info-item-value">${approval.createdByName || 'Administrator'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-item-label">Date Requested</div>
+                            <div class="info-item-value">${createdDate}</div>
+                        </div>
+                    </div>
+                </div>
+
+                ${reportData.engineer || reportData.description || reportData.head_section ? `
+                <div class="info-section">
+                    <div class="info-section-title">Report Information</div>
+                    <div class="info-grid">
+                        ${reportData.engineer ? `
+                        <div class="info-item">
+                            <div class="info-item-label">Engineer</div>
+                            <div class="info-item-value">${reportData.engineer}</div>
+                        </div>
+                        ` : ''}
+                        ${reportData.head_section ? `
+                        <div class="info-item">
+                            <div class="info-item-label">Head of Section</div>
+                            <div class="info-item-value">${reportData.head_section}</div>
+                        </div>
+                        ` : ''}
+                        ${reportData.description ? `
+                        <div class="info-item full">
+                            <div class="info-item-label">Description</div>
+                            <div class="info-item-value">${reportData.description}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="info-section" style="margin-bottom: 0;">
+                    <div class="info-section-title">Your Response</div>
+                    <p class="text-secondary text-sm mb-4">
+                        By approving, you authorize your digital signature to be used on this job order report.
+                    </p>
+                    <div class="action-buttons">
+                        <button class="btn btn-success" onclick="respond('approve')" id="approveBtn">
+                            <span>&#9989;</span> Approve
+                        </button>
+                        <button class="btn btn-danger" onclick="respond('reject')" id="rejectBtn">
+                            <span>&#10060;</span> Reject
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function respond(action) {
+            const approveBtn = document.getElementById('approveBtn');
+            const rejectBtn = document.getElementById('rejectBtn');
+
+            approveBtn.disabled = true;
+            rejectBtn.disabled = true;
+            approveBtn.classList.add('btn-loading');
+            rejectBtn.classList.add('btn-loading');
+
+            try {
+                const res = await fetch(`/api/approvals/respond/${token}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || 'Failed to process response');
+                }
+
+                // Show success state
+                const isApproved = action === 'approve';
+                document.getElementById('headerSubtext').textContent =
+                    isApproved ? 'You have approved this request' : 'You have rejected this request';
+
+                document.getElementById('reviewBody').innerHTML = `
+                    <div class="status-message" style="padding: 24px 0;">
+                        <div class="status-icon ${isApproved ? 'success' : 'warning'}">
+                            ${isApproved ? '&#9989;' : '&#10060;'}
+                        </div>
+                        <div class="status-title">
+                            ${isApproved ? 'Signature Approved' : 'Request Rejected'}
+                        </div>
+                        <div class="status-description">
+                            ${isApproved
+                                ? 'Thank you! Your signature has been approved and will be included in the job order report.'
+                                : 'Your signature will not be used for this report. The requester has been notified.'}
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                approveBtn.disabled = false;
+                rejectBtn.disabled = false;
+                approveBtn.classList.remove('btn-loading');
+                rejectBtn.classList.remove('btn-loading');
+
+                alert(err.message || 'Failed to submit response. Please try again.');
+            }
+        }
+
+        function showError(title, description) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('reviewContent').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('errorTitle').textContent = title;
+            document.getElementById('errorDescription').textContent = description;
+        }
+    </script>
+</body>
+</html>

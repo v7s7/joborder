@@ -363,27 +363,17 @@ async function handleSubmit(e) {
         data[key] = value;
     }
 
+    // Check if staff signature is selected - requires approval workflow
+    const staffSignature = data.staff_signature;
+    const hasStaffSignature = staffSignature && staffSignature.trim() !== '';
+
     try {
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(data)
-        });
-
-        // Check if unauthorized
-        if (response.status === 401) {
-            showLoginModal();
-            return;
-        }
-
-        const result = await response.json();
-
-        if (result.success) {
-            showSuccessModal(result.job_no);
-            showToast(`Job order ${result.job_no} created successfully!`, 'success');
+        if (hasStaffSignature) {
+            // Staff signature selected - request approval instead of generating
+            await requestSignatureApproval(data, staffSignature);
         } else {
-            showToast(result.error || 'Failed to generate report', 'error');
+            // No staff signature - generate report directly
+            await generateReport(data);
         }
     } catch (error) {
         console.error('Submit error:', error);
@@ -399,6 +389,71 @@ async function handleSubmit(e) {
         if (statusText) {
             statusText.textContent = 'Ready';
         }
+    }
+}
+
+async function generateReport(data) {
+    const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data)
+    });
+
+    // Check if unauthorized
+    if (response.status === 401) {
+        showLoginModal();
+        return;
+    }
+
+    const result = await response.json();
+
+    if (result.success) {
+        showSuccessModal(result.job_no);
+        showToast(`Job order ${result.job_no} created successfully!`, 'success');
+    } else {
+        showToast(result.error || 'Failed to generate report', 'error');
+    }
+}
+
+async function requestSignatureApproval(reportData, staffUserId) {
+    const response = await fetch('/api/approvals/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+            staffUserId: staffUserId,
+            reportData: reportData
+        })
+    });
+
+    if (response.status === 401) {
+        showLoginModal();
+        return;
+    }
+
+    const result = await response.json();
+
+    if (result.success) {
+        showApprovalRequestedModal();
+        showToast('Signature approval request sent!', 'success');
+    } else {
+        showToast(result.error || 'Failed to send approval request', 'error');
+    }
+}
+
+function showApprovalRequestedModal() {
+    // Use existing success modal with different message
+    if (successModal) {
+        const successMessage = document.getElementById('successMessage');
+        if (successMessage) {
+            successMessage.innerHTML = `
+                <strong>Approval Request Sent</strong><br><br>
+                The staff member will receive an email to approve their signature for this report.
+                Once approved, you can generate the report from the <a href="/pending-approvals.html">Pending Approvals</a> page.
+            `;
+        }
+        successModal.classList.add('active');
     }
 }
 
