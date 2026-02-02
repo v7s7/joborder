@@ -27,13 +27,18 @@
                         <span class="nav-item-icon">&#128200;</span>
                         Dashboard
                     </a>
-                    <a href="/" class="nav-item active">
+                    <a href="/" class="nav-item active" id="newJobOrderNav">
                         <span class="nav-item-icon">&#128221;</span>
                         New Job Order
                     </a>
-                    <a href="/reports.html" class="nav-item">
+                    <a href="/reports.html" class="nav-item" id="reportsNav">
                         <span class="nav-item-icon">&#128202;</span>
                         Reports
+                    </a>
+                    <a href="/pending-approvals.html" class="nav-item">
+                        <span class="nav-item-icon">&#128338;</span>
+                        <span id="navApprovalLabel">Pending Approvals</span>
+                        <span class="nav-item-badge" id="approvalsBadge" style="display: none;">0</span>
                     </a>
                 </div>
 
@@ -92,6 +97,16 @@
 
             <!-- Page Content -->
             <div class="page-content">
+                <div class="alert alert-info mb-4" id="staffNotice" style="display: none;">
+                    <div class="alert-icon">&#128221;</div>
+                    <div class="alert-content">
+                        <div class="alert-title">Signature Requests Only</div>
+                        <div class="alert-message">
+                            Your account can review and accept signature requests, but cannot generate reports.
+                            Please visit <a href="/pending-approvals.html">Pending Approvals</a> to approve signatures.
+                        </div>
+                    </div>
+                </div>
                 <!-- Form Container -->
                 <form id="jobForm" class="form-container">
                     <div class="grid grid-cols-3 gap-4" style="grid-template-columns: 2fr 1fr;">

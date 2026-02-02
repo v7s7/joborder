@@ -45,14 +45,20 @@ function loadDatabase() {
   } catch (err) {
     console.error('Error loading database:', err);
   }
-  return { users: {}, invitations: {}, signatures: {} };
+  return { users: {}, invitations: {}, signatures: {}, pendingApprovals: {} };
+}
+
+// Ensure pendingApprovals exists in loaded database
+function ensureDbStructure(db) {
+  if (!db.pendingApprovals) db.pendingApprovals = {};
+  return db;
 }
 
 function saveDatabase(db) {
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 }
 
-let db = loadDatabase();
+let db = ensureDbStructure(loadDatabase());
 
 // =============================================================================
 // FILE UPLOAD CONFIGURATION
@@ -137,6 +143,75 @@ async function sendSignatureInviteEmail(toEmail, name, token, fromUser = null) {
   await transporter.sendMail(mailOptions);
 }
 
+/**
+ * Send signature approval request email
+ * @param {string} toEmail - Staff member email
+ * @param {string} staffName - Staff member name
+ * @param {string} token - Approval token
+ * @param {object} reportInfo - Report details (jobNo, requestedBy, etc.)
+ */
+async function sendApprovalRequestEmail(toEmail, staffName, token, reportInfo) {
+  const appUrl = process.env.APP_URL || `http://localhost:${PORT}`;
+  const reviewLink = `${appUrl}/approval-review.html?token=${token}`;
+
+  const fromAddress = process.env.SMTP_FROM || 'Signature Verify <signatureVerify@swd.bh>';
+
+  const mailOptions = {
+    from: fromAddress,
+    to: toEmail,
+    subject: `Signature Approval Required - Job Order #${reportInfo.jobNo}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 20px;">
+        <div style="background: white; border-radius: 8px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <h2 style="color: #1e293b; margin: 0 0 24px 0; font-size: 24px;">Signature Approval Request</h2>
+
+          <p style="color: #475569; margin: 0 0 16px 0;">Hello ${staffName},</p>
+
+          <p style="color: #475569; margin: 0 0 24px 0;">
+            Your signature has been requested for a job order report. Please review the details below and approve or reject this request.
+          </p>
+
+          <div style="background: #f1f5f9; border-radius: 6px; padding: 16px; margin: 0 0 24px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="color: #64748b; padding: 4px 0; font-size: 14px;">Job Order #:</td>
+                <td style="color: #1e293b; padding: 4px 0; font-size: 14px; font-weight: 600;">${reportInfo.jobNo}</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b; padding: 4px 0; font-size: 14px;">Requested By:</td>
+                <td style="color: #1e293b; padding: 4px 0; font-size: 14px; font-weight: 600;">${reportInfo.requestedBy}</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b; padding: 4px 0; font-size: 14px;">Date:</td>
+                <td style="color: #1e293b; padding: 4px 0; font-size: 14px; font-weight: 600;">${reportInfo.date}</td>
+              </tr>
+            </table>
+          </div>
+
+          <p style="text-align: center; margin: 0 0 16px 0;">
+            <a href="${reviewLink}"
+               style="background: #6366f1; color: white; padding: 14px 32px;
+                      text-decoration: none; border-radius: 6px; display: inline-block;
+                      font-weight: 500; font-size: 16px;">
+              Review and Respond
+            </a>
+          </p>
+
+          <p style="color: #94a3b8; font-size: 13px; margin: 24px 0 0 0; text-align: center;">
+            This request will expire in 7 days. If you did not expect this, please contact your administrator.
+          </p>
+        </div>
+
+        <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 16px 0 0 0;">
+          Job Order Management System
+        </p>
+      </div>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
 // =============================================================================
 // MIDDLEWARE SETUP
 // =============================================================================
@@ -181,7 +256,13 @@ const authGuard = (req, res, next) => {
     '/api/signature/setup'
   ];
 
-  const isPublic = publicPaths.some(p => req.path === p) || req.path.startsWith('/auth/');
+  // Routes that are public with token (approval review via email)
+  const isApprovalRoute = req.path.startsWith('/api/approvals/review/') ||
+                          req.path.startsWith('/api/approvals/respond/');
+
+  const isPublic = publicPaths.some(p => req.path === p) ||
+                   req.path.startsWith('/auth/') ||
+                   isApprovalRoute;
 
   // Allow static files and signature setup page
   const isStatic = req.path.endsWith('.html') ||
@@ -208,12 +289,36 @@ const ADMIN_EMAILS = process.env.ADMIN_EMAILS
   ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase())
   : [];
 
+// Parse leader emails from environment (Head of Section/Department)
+const DEFAULT_LEADER_EMAILS = ['h.hayat@swd.bh'];
+const ENV_LEADER_EMAILS = process.env.LEADER_EMAILS
+  ? process.env.LEADER_EMAILS.split(',').map(e => e.trim().toLowerCase())
+  : [];
+const LEADER_EMAILS = [...new Set([...DEFAULT_LEADER_EMAILS, ...ENV_LEADER_EMAILS])];
+
 /**
  * Check if a user is an admin
  */
 function isAdmin(user) {
   if (!user || !user.email) return false;
   return ADMIN_EMAILS.includes(user.email.toLowerCase());
+}
+
+/**
+ * Check if a user is a leader (Head of Section/Department)
+ */
+function isLeader(user) {
+  if (!user || !user.email) return false;
+  return LEADER_EMAILS.includes(user.email.toLowerCase());
+}
+
+/**
+ * Get user role
+ */
+function getUserRole(user) {
+  if (isAdmin(user)) return 'admin';
+  if (isLeader(user)) return 'leader';
+  return 'staff';
 }
 
 // Admin guard middleware
@@ -225,6 +330,20 @@ const adminGuard = (req, res, next) => {
   // Check if user email is in admin list
   if (!isAdmin(req.session.user)) {
     return res.status(403).json({ error: 'Forbidden', message: 'Admin access required' });
+  }
+
+  next();
+};
+
+// Leader or Admin guard middleware
+const leaderGuard = (req, res, next) => {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const user = req.session.user;
+  if (!isAdmin(user) && !isLeader(user)) {
+    return res.status(403).json({ error: 'Forbidden', message: 'Leader access required' });
   }
 
   next();
@@ -392,7 +511,9 @@ app.post('/auth/login', async (req, res) => {
         ok: true,
         user: {
           ...req.session.user,
-          isAdmin: isAdmin(req.session.user)
+          isAdmin: isAdmin(req.session.user),
+          isLeader: isLeader(req.session.user),
+          role: getUserRole(req.session.user)
         }
       });
     } else {
@@ -417,10 +538,13 @@ app.post('/auth/logout', (req, res) => {
 
 app.get('/auth/me', (req, res) => {
   if (req.session && req.session.user) {
+    const user = req.session.user;
     return res.json({
       user: {
-        ...req.session.user,
-        isAdmin: isAdmin(req.session.user)
+        ...user,
+        isAdmin: isAdmin(user),
+        isLeader: isLeader(user),
+        role: getUserRole(user)
       }
     });
   }
@@ -664,20 +788,50 @@ app.post('/api/signature/setup', upload.single('signature'), (req, res) => {
 // =============================================================================
 
 app.get('/api/signatures', (req, res) => {
+  const user = req.session?.user;
+  const userIsAdmin = isAdmin(user);
+  const userEmail = user?.email?.toLowerCase();
+
   const approved = Object.entries(db.signatures)
     .filter(([_, sig]) => sig.status === 'approved')
-    .map(([userId, sig]) => ({
-      userId,
-      name: sig.name,
-      email: sig.email,
-      signatureUrl: `/signatures/${sig.filename}`
-    }));
+    .map(([userId, sig]) => {
+      // Only admins can see signature URLs
+      // Staff can see their own signature URL
+      const canSeeSignature = userIsAdmin || (userEmail && sig.email?.toLowerCase() === userEmail);
+
+      return {
+        userId,
+        name: sig.name,
+        email: sig.email,
+        signatureUrl: canSeeSignature ? `/signatures/${sig.filename}` : null,
+        hasSignature: true
+      };
+    });
 
   res.json({ signatures: approved });
 });
 
-// Serve signature images
-app.use('/signatures', express.static(SIGNATURES_DIR));
+// Serve signature images - only admins or signature owners can access
+app.use('/signatures', (req, res, next) => {
+  const user = req.session?.user;
+
+  // Allow admins full access
+  if (isAdmin(user)) {
+    return next();
+  }
+
+  // Check if user owns this signature
+  if (user?.email) {
+    const filename = req.path.replace('/', '');
+    const ownerSig = Object.values(db.signatures).find(sig => sig.filename === filename);
+    if (ownerSig && ownerSig.email?.toLowerCase() === user.email.toLowerCase()) {
+      return next();
+    }
+  }
+
+  // Deny access
+  return res.status(403).json({ error: 'Access denied' });
+}, express.static(SIGNATURES_DIR));
 
 // =============================================================================
 // DASHBOARD & REPORTS API ROUTES
@@ -783,7 +937,7 @@ app.get('/api/dashboard/stats', (req, res) => {
 });
 
 // Reports list with filtering
-app.get('/api/reports', (req, res) => {
+app.get('/api/reports', leaderGuard, (req, res) => {
   try {
     const reports = getAllReports();
 
@@ -805,7 +959,276 @@ app.get('/api/reports', (req, res) => {
 });
 
 // Serve generated reports for download
-app.use('/Generated_Reports', express.static(REPORTS_DIR));
+app.use('/Generated_Reports', leaderGuard, express.static(REPORTS_DIR));
+
+// =============================================================================
+// SIGNATURE APPROVAL API ROUTES
+// =============================================================================
+
+// Get pending approvals (admin or creator can see)
+app.get('/api/approvals/pending', (req, res) => {
+  try {
+    const user = req.session.user;
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const userIsAdmin = isAdmin(user);
+    const userEmail = user.email?.toLowerCase();
+
+    // Filter approvals: admins see all, users see only their own requests
+    const approvals = Object.entries(db.pendingApprovals || {})
+      .filter(([_, approval]) => {
+        if (userIsAdmin) return true;
+        return approval.createdBy?.toLowerCase() === userEmail ||
+               approval.staffEmail?.toLowerCase() === userEmail;
+      })
+      .map(([token, approval]) => ({
+        token,
+        ...approval,
+        // Hide signature URL from non-admins unless they are the staff member
+        signatureUrl: (userIsAdmin || approval.staffEmail?.toLowerCase() === userEmail)
+          ? approval.signatureUrl
+          : null
+      }))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({ approvals });
+  } catch (err) {
+    console.error('Get approvals error:', err);
+    res.status(500).json({ error: 'Failed to load approvals' });
+  }
+});
+
+// Request signature approval (when generating report with staff signature)
+app.post('/api/approvals/request', leaderGuard, async (req, res) => {
+  try {
+    const user = req.session.user;
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { staffUserId, reportData } = req.body;
+
+    if (!staffUserId) {
+      return res.status(400).json({ error: 'Staff user ID is required' });
+    }
+
+    // Find the staff signature
+    const staffSig = db.signatures[staffUserId.toLowerCase()];
+    if (!staffSig || staffSig.status !== 'approved') {
+      return res.status(400).json({ error: 'Staff signature not found or not approved' });
+    }
+
+    // Generate approval token
+    const token = uuidv4();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    // Store pending approval
+    db.pendingApprovals[token] = {
+      staffUserId: staffUserId.toLowerCase(),
+      staffName: staffSig.name,
+      staffEmail: staffSig.email,
+      signatureUrl: `/signatures/${staffSig.filename}`,
+      reportData: reportData,
+      status: 'pending',
+      createdBy: user.email,
+      createdByName: user.name || user.username,
+      createdAt: new Date().toISOString(),
+      expiresAt: expiresAt.toISOString()
+    };
+
+    saveDatabase(db);
+
+    // Send email to staff
+    try {
+      await sendApprovalRequestEmail(
+        staffSig.email,
+        staffSig.name,
+        token,
+        {
+          jobNo: reportData.jobNo || 'Pending',
+          requestedBy: user.name || user.username || user.email,
+          date: new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })
+        }
+      );
+    } catch (emailErr) {
+      console.error('Failed to send approval email:', emailErr);
+      // Continue anyway - approval is created
+    }
+
+    res.json({
+      success: true,
+      token,
+      message: 'Approval request sent to staff member'
+    });
+  } catch (err) {
+    console.error('Request approval error:', err);
+    res.status(500).json({ error: 'Failed to create approval request' });
+  }
+});
+
+// Get approval details by token (for review page - public with token)
+app.get('/api/approvals/review/:token', (req, res) => {
+  try {
+    const { token } = req.params;
+    const approval = db.pendingApprovals[token];
+
+    if (!approval) {
+      return res.status(404).json({ error: 'Approval request not found' });
+    }
+
+    // Check expiration
+    if (new Date(approval.expiresAt) < new Date()) {
+      return res.status(410).json({ error: 'Approval request has expired' });
+    }
+
+    res.json({
+      approval: {
+        staffName: approval.staffName,
+        reportData: approval.reportData,
+        status: approval.status,
+        createdByName: approval.createdByName,
+        createdAt: approval.createdAt
+      }
+    });
+  } catch (err) {
+    console.error('Get approval review error:', err);
+    res.status(500).json({ error: 'Failed to load approval details' });
+  }
+});
+
+// Respond to approval request (approve or reject)
+app.post('/api/approvals/respond/:token', (req, res) => {
+  try {
+    const { token } = req.params;
+    const { action } = req.body; // 'approve' or 'reject'
+
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+
+    const approval = db.pendingApprovals[token];
+
+    if (!approval) {
+      return res.status(404).json({ error: 'Approval request not found' });
+    }
+
+    // Check expiration
+    if (new Date(approval.expiresAt) < new Date()) {
+      return res.status(410).json({ error: 'Approval request has expired' });
+    }
+
+    // Check if already responded
+    if (approval.status !== 'pending') {
+      return res.status(400).json({ error: 'Approval has already been processed' });
+    }
+
+    // Update status
+    approval.status = action === 'approve' ? 'approved' : 'rejected';
+    approval.respondedAt = new Date().toISOString();
+
+    saveDatabase(db);
+
+    res.json({
+      success: true,
+      status: approval.status,
+      message: action === 'approve'
+        ? 'Signature approved. The report can now be generated.'
+        : 'Signature request rejected.'
+    });
+  } catch (err) {
+    console.error('Respond to approval error:', err);
+    res.status(500).json({ error: 'Failed to process response' });
+  }
+});
+
+// Delete/cancel approval request (admin or creator only)
+app.delete('/api/approvals/:token', (req, res) => {
+  try {
+    const user = req.session.user;
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { token } = req.params;
+    const approval = db.pendingApprovals[token];
+
+    if (!approval) {
+      return res.status(404).json({ error: 'Approval request not found' });
+    }
+
+    const userIsAdmin = isAdmin(user);
+    const isCreator = approval.createdBy?.toLowerCase() === user.email?.toLowerCase();
+
+    if (!userIsAdmin && !isCreator) {
+      return res.status(403).json({ error: 'Not authorized to delete this request' });
+    }
+
+    delete db.pendingApprovals[token];
+    saveDatabase(db);
+
+    res.json({ success: true, message: 'Approval request deleted' });
+  } catch (err) {
+    console.error('Delete approval error:', err);
+    res.status(500).json({ error: 'Failed to delete approval request' });
+  }
+});
+
+// Generate report from approved request
+app.post('/api/approvals/:token/generate', leaderGuard, async (req, res) => {
+  try {
+    const user = req.session.user;
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { token } = req.params;
+    const approval = db.pendingApprovals[token];
+
+    if (!approval) {
+      return res.status(404).json({ error: 'Approval request not found' });
+    }
+
+    if (approval.status !== 'approved') {
+      return res.status(400).json({ error: 'Signature has not been approved yet' });
+    }
+
+    // Check authorization
+    const userIsAdmin = isAdmin(user);
+    const isCreator = approval.createdBy?.toLowerCase() === user.email?.toLowerCase();
+
+    if (!userIsAdmin && !isCreator) {
+      return res.status(403).json({ error: 'Not authorized to generate this report' });
+    }
+
+    // Forward to generate endpoint with approved signature
+    const reportData = {
+      ...approval.reportData,
+      staff_signature: approval.staffUserId,
+      _approvalToken: token
+    };
+
+    // Set request body and call generate handler internally
+    req.body = reportData;
+    req.approvalToken = token;
+
+    // We'll handle this in the generate endpoint
+    res.json({
+      success: true,
+      redirect: true,
+      reportData: reportData,
+      message: 'Ready to generate report'
+    });
+  } catch (err) {
+    console.error('Generate from approval error:', err);
+    res.status(500).json({ error: 'Failed to process generation' });
+  }
+});
 
 // =============================================================================
 // JOB ORDER API ROUTES
@@ -870,7 +1293,7 @@ app.get('/api/get-job-no', (req, res) => {
   res.json({ job_no: jobNo });
 });
 
-app.post('/api/generate', async (req, res) => {
+app.post('/api/generate', leaderGuard, async (req, res) => {
   try {
     const data = req.body;
     const jobNo = getNextJobNo();
@@ -933,7 +1356,8 @@ app.post('/api/generate', async (req, res) => {
       }
     }
 
-    // Add signatures as images
+    // Add signatures as images - stretch to fit merged cell dimensions
+    // E13:I13 is merged (cols 4-8), N13:T13 is merged (cols 13-19)
     if (data.admin_signature) {
       const sig = db.signatures[data.admin_signature.toLowerCase()];
       if (sig && sig.status === 'approved') {
@@ -943,10 +1367,11 @@ app.post('/api/generate', async (req, res) => {
             filename: imagePath,
             extension: 'png'
           });
-          // E13 position: anchor image within the cell boundaries
+          // E13:I13 merged cell - stretch from col E (4) to end of col I (9)
           ws.addImage(imageId, {
-            tl: { col: 4, row: 12 },   // E13 (0-indexed)
-            br: { col: 5, row: 13 }    // E13 (next column/row)
+            tl: { col: 4, row: 12 },
+            br: { col: 9, row: 13 },
+            editAs: 'twoCell'
           });
         }
       }
@@ -961,10 +1386,11 @@ app.post('/api/generate', async (req, res) => {
             filename: imagePath,
             extension: 'png'
           });
-          // N13 position: anchor image within the cell boundaries
+          // N13:T13 merged cell - stretch from col N (13) to end of col T (20)
           ws.addImage(imageId, {
-            tl: { col: 13, row: 12 },  // N13 (0-indexed)
-            br: { col: 14, row: 13 }   // N13 (next column/row)
+            tl: { col: 13, row: 12 },
+            br: { col: 20, row: 13 },
+            editAs: 'twoCell'
           });
         }
       }

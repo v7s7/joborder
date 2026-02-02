@@ -28,13 +28,18 @@
                         <span class="nav-item-icon">&#128200;</span>
                         Dashboard
                     </a>
-                    <a href="/" class="nav-item">
+                    <a href="/" class="nav-item" id="newJobOrderNav">
                         <span class="nav-item-icon">&#128221;</span>
                         New Job Order
                     </a>
-                    <a href="/reports.html" class="nav-item">
+                    <a href="/reports.html" class="nav-item" id="reportsNav">
                         <span class="nav-item-icon">&#128202;</span>
                         Reports
+                    </a>
+                    <a href="/pending-approvals.html" class="nav-item">
+                        <span class="nav-item-icon">&#128338;</span>
+                        <span id="navApprovalLabel">Pending Approvals</span>
+                        <span class="nav-item-badge" id="approvalsBadge" style="display: none;">0</span>
                     </a>
                 </div>
 
@@ -394,15 +399,43 @@
             // Update UI
             document.getElementById('sidebarAvatar').textContent = (user.name || user.username).charAt(0).toUpperCase();
             document.getElementById('sidebarUserName').textContent = user.name || user.username;
-            document.getElementById('sidebarUserRole').textContent = user.isAdmin ? 'Administrator' : 'Staff';
+            const roleLabel = user.isAdmin ? 'Administrator' : user.isLeader ? 'Leader' : 'Staff';
+            document.getElementById('sidebarUserRole').textContent = roleLabel;
             document.getElementById('welcomeName').textContent = (user.name || user.username).split(' ')[0];
 
-            // Show admin sections
+            // Show admin sections (only for admins)
             if (user.isAdmin) {
                 document.getElementById('adminSection').style.display = 'block';
                 document.getElementById('adminQuickAction').style.display = 'flex';
                 loadPendingCount();
             }
+
+            const isStaffOnly = !user.isAdmin && !user.isLeader;
+            const newJobNav = document.getElementById('newJobOrderNav');
+            if (newJobNav && isStaffOnly) {
+                newJobNav.style.display = 'none';
+            }
+
+            const reportsNav = document.getElementById('reportsNav');
+            if (reportsNav && isStaffOnly) {
+                reportsNav.style.display = 'none';
+            }
+
+            const navApprovalLabel = document.getElementById('navApprovalLabel');
+            if (navApprovalLabel && isStaffOnly) {
+                navApprovalLabel.textContent = 'My Signature Requests';
+            }
+
+            if (isStaffOnly) {
+                document.querySelectorAll('a[href="/reports.html"]').forEach(link => {
+                    link.style.display = 'none';
+                });
+                document.querySelectorAll('a[href="/"]').forEach(link => {
+                    link.style.display = 'none';
+                });
+            }
+
+            loadApprovalsBadgeCount();
 
             // Load dashboard data
             loadDashboardData();
@@ -625,6 +658,32 @@
                 }
             } catch (error) {
                 console.error('Failed to load pending count');
+            }
+        }
+
+        async function loadApprovalsBadgeCount() {
+            const badge = document.getElementById('approvalsBadge');
+            if (!badge) return;
+
+            try {
+                const response = await fetch('/api/approvals/pending', { credentials: 'include' });
+                if (!response.ok) {
+                    badge.style.display = 'none';
+                    return;
+                }
+
+                const data = await response.json();
+                const pendingCount = (data.approvals || []).filter(approval => approval.status === 'pending').length;
+
+                if (pendingCount > 0) {
+                    badge.textContent = pendingCount;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Failed to load approvals count:', error);
+                badge.style.display = 'none';
             }
         }
 

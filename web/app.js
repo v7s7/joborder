@@ -198,19 +198,50 @@ function setLoggedIn(user) {
         sidebarUserName.textContent = user.name || user.username;
     }
     if (sidebarUserRole) {
-        sidebarUserRole.textContent = user.isAdmin ? 'Administrator' : 'Staff';
+        // Show appropriate role label
+        const roleLabel = user.isAdmin ? 'Administrator' : user.isLeader ? 'Leader' : 'Staff';
+        sidebarUserRole.textContent = roleLabel;
     }
 
-    // Show admin section if applicable
+    // Show admin section if applicable (admins only)
     const adminSection = document.getElementById('adminSection');
     if (adminSection && user.isAdmin) {
         adminSection.style.display = 'block';
         loadPendingCount();
     }
 
-    // Load job number and signatures
-    loadJobNumber();
-    loadSignatures();
+    const isStaffOnly = !user.isAdmin && !user.isLeader;
+
+    const reportsNav = document.getElementById('reportsNav');
+    if (reportsNav && isStaffOnly) {
+        reportsNav.style.display = 'none';
+    }
+
+    const newJobOrderNav = document.getElementById('newJobOrderNav');
+    if (newJobOrderNav && isStaffOnly) {
+        newJobOrderNav.style.display = 'none';
+    }
+
+    const navApprovalLabel = document.getElementById('navApprovalLabel');
+    if (navApprovalLabel && isStaffOnly) {
+        navApprovalLabel.textContent = 'My Signature Requests';
+    }
+
+    const staffNotice = document.getElementById('staffNotice');
+    if (staffNotice) {
+        staffNotice.style.display = isStaffOnly ? 'flex' : 'none';
+    }
+
+    if (jobForm) {
+        jobForm.style.display = isStaffOnly ? 'none' : '';
+    }
+
+    if (!isStaffOnly) {
+        loadJobNumber();
+        loadSignatures();
+    }
+
+    loadApprovalsBadgeCount();
 }
 
 function showLoginModal() {
@@ -288,7 +319,7 @@ function populateSignatureDropdowns() {
 
     const defaultOption = '<option value="">-- Select Signature --</option>';
     const options = signatures.map(sig =>
-        `<option value="${sig.userId}" data-url="${sig.signatureUrl}">${sig.name}</option>`
+        `<option value="${sig.userId}" data-url="${sig.signatureUrl || ''}" data-has-signature="${sig.hasSignature}">${sig.name}</option>`
     ).join('');
 
     if (adminSelect) {
@@ -314,7 +345,19 @@ function updateSignaturePreview(type) {
 
     const sig = signatures.find(s => s.userId === userId);
     if (sig) {
-        preview.innerHTML = `<img src="${sig.signatureUrl}" alt="${sig.name}'s signature">`;
+        // Only show signature image if user has permission to view it
+        if (sig.signatureUrl) {
+            preview.innerHTML = `<img src="${sig.signatureUrl}" alt="${sig.name}'s signature">`;
+        } else {
+            // Show placeholder for non-admins who can't see signatures
+            preview.innerHTML = `
+                <div style="padding: 16px; text-align: center; background: var(--bg-tertiary); border-radius: 8px; color: var(--text-secondary);">
+                    <div style="font-size: 24px; margin-bottom: 8px;">&#128274;</div>
+                    <div style="font-size: 12px;">${sig.name}'s Signature</div>
+                    <div style="font-size: 11px; opacity: 0.7;">Signature protected</div>
+                </div>
+            `;
+        }
     }
 }
 
@@ -363,27 +406,17 @@ async function handleSubmit(e) {
         data[key] = value;
     }
 
+    // Check if staff signature is selected - requires approval workflow
+    const staffSignature = data.staff_signature;
+    const hasStaffSignature = staffSignature && staffSignature.trim() !== '';
+
     try {
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(data)
-        });
-
-        // Check if unauthorized
-        if (response.status === 401) {
-            showLoginModal();
-            return;
-        }
-
-        const result = await response.json();
-
-        if (result.success) {
-            showSuccessModal(result.job_no);
-            showToast(`Job order ${result.job_no} created successfully!`, 'success');
+        if (hasStaffSignature) {
+            // Staff signature selected - request approval instead of generating
+            await requestSignatureApproval(data, staffSignature);
         } else {
-            showToast(result.error || 'Failed to generate report', 'error');
+            // No staff signature - generate report directly
+            await generateReport(data);
         }
     } catch (error) {
         console.error('Submit error:', error);
@@ -399,6 +432,71 @@ async function handleSubmit(e) {
         if (statusText) {
             statusText.textContent = 'Ready';
         }
+    }
+}
+
+async function generateReport(data) {
+    const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data)
+    });
+
+    // Check if unauthorized
+    if (response.status === 401) {
+        showLoginModal();
+        return;
+    }
+
+    const result = await response.json();
+
+    if (result.success) {
+        showSuccessModal(result.job_no);
+        showToast(`Job order ${result.job_no} created successfully!`, 'success');
+    } else {
+        showToast(result.error || 'Failed to generate report', 'error');
+    }
+}
+
+async function requestSignatureApproval(reportData, staffUserId) {
+    const response = await fetch('/api/approvals/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+            staffUserId: staffUserId,
+            reportData: reportData
+        })
+    });
+
+    if (response.status === 401) {
+        showLoginModal();
+        return;
+    }
+
+    const result = await response.json();
+
+    if (result.success) {
+        showApprovalRequestedModal();
+        showToast('Signature approval request sent!', 'success');
+    } else {
+        showToast(result.error || 'Failed to send approval request', 'error');
+    }
+}
+
+function showApprovalRequestedModal() {
+    // Use existing success modal with different message
+    if (successModal) {
+        const successMessage = document.getElementById('successMessage');
+        if (successMessage) {
+            successMessage.innerHTML = `
+                <strong>Approval Request Sent</strong><br><br>
+                The staff member will receive an email to approve their signature for this report.
+                Once approved, you can generate the report from the <a href="/pending-approvals.html">Pending Approvals</a> page.
+            `;
+        }
+        successModal.classList.add('active');
     }
 }
 
@@ -461,6 +559,32 @@ async function loadPendingCount() {
         }
     } catch (error) {
         console.error('Failed to load pending count:', error);
+    }
+}
+
+async function loadApprovalsBadgeCount() {
+    const badge = document.getElementById('approvalsBadge');
+    if (!badge) return;
+
+    try {
+        const response = await fetch('/api/approvals/pending', { credentials: 'include' });
+        if (!response.ok) {
+            badge.style.display = 'none';
+            return;
+        }
+
+        const data = await response.json();
+        const pendingCount = (data.approvals || []).filter(approval => approval.status === 'pending').length;
+
+        if (pendingCount > 0) {
+            badge.textContent = pendingCount;
+            badge.style.display = 'inline';
+        } else {
+            badge.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Failed to load approval notifications:', error);
+        badge.style.display = 'none';
     }
 }
 
