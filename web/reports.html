@@ -411,9 +411,10 @@
             // Update UI
             document.getElementById('sidebarAvatar').textContent = (user.name || user.username).charAt(0).toUpperCase();
             document.getElementById('sidebarUserName').textContent = user.name || user.username;
-            document.getElementById('sidebarUserRole').textContent = user.isAdmin ? 'Administrator' : 'Staff';
+            const roleLabel = user.isAdmin ? 'Administrator' : user.isLeader ? 'Leader' : 'Staff';
+            document.getElementById('sidebarUserRole').textContent = roleLabel;
 
-            // Show admin sections
+            // Show admin sections (only for admins)
             if (user.isAdmin) {
                 document.getElementById('adminSection').style.display = 'block';
                 loadPendingCount();

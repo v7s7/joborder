@@ -198,10 +198,12 @@ function setLoggedIn(user) {
         sidebarUserName.textContent = user.name || user.username;
     }
     if (sidebarUserRole) {
-        sidebarUserRole.textContent = user.isAdmin ? 'Administrator' : 'Staff';
+        // Show appropriate role label
+        const roleLabel = user.isAdmin ? 'Administrator' : user.isLeader ? 'Leader' : 'Staff';
+        sidebarUserRole.textContent = roleLabel;
     }
 
-    // Show admin section if applicable
+    // Show admin section if applicable (admins only)
     const adminSection = document.getElementById('adminSection');
     if (adminSection && user.isAdmin) {
         adminSection.style.display = 'block';
@@ -288,7 +290,7 @@ function populateSignatureDropdowns() {
 
     const defaultOption = '<option value="">-- Select Signature --</option>';
     const options = signatures.map(sig =>
-        `<option value="${sig.userId}" data-url="${sig.signatureUrl}">${sig.name}</option>`
+        `<option value="${sig.userId}" data-url="${sig.signatureUrl || ''}" data-has-signature="${sig.hasSignature}">${sig.name}</option>`
     ).join('');
 
     if (adminSelect) {
@@ -314,7 +316,19 @@ function updateSignaturePreview(type) {
 
     const sig = signatures.find(s => s.userId === userId);
     if (sig) {
-        preview.innerHTML = `<img src="${sig.signatureUrl}" alt="${sig.name}'s signature">`;
+        // Only show signature image if user has permission to view it
+        if (sig.signatureUrl) {
+            preview.innerHTML = `<img src="${sig.signatureUrl}" alt="${sig.name}'s signature">`;
+        } else {
+            // Show placeholder for non-admins who can't see signatures
+            preview.innerHTML = `
+                <div style="padding: 16px; text-align: center; background: var(--bg-tertiary); border-radius: 8px; color: var(--text-secondary);">
+                    <div style="font-size: 24px; margin-bottom: 8px;">&#128274;</div>
+                    <div style="font-size: 12px;">${sig.name}'s Signature</div>
+                    <div style="font-size: 11px; opacity: 0.7;">Signature protected</div>
+                </div>
+            `;
+        }
     }
 }
 

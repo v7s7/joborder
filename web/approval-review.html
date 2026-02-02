@@ -340,7 +340,7 @@
                     </div>
                 </div>
 
-                ${reportData.engineer || reportData.description || reportData.head_section ? `
+                ${reportData.engineer || reportData.description || reportData.head_section || reportData.objective ? `
                 <div class="info-section">
                     <div class="info-section-title">Report Information</div>
                     <div class="info-grid">
@@ -356,15 +356,40 @@
                             <div class="info-item-value">${reportData.head_section}</div>
                         </div>
                         ` : ''}
+                        ${reportData.main_date ? `
+                        <div class="info-item">
+                            <div class="info-item-label">Report Date</div>
+                            <div class="info-item-value">${reportData.main_date}</div>
+                        </div>
+                        ` : ''}
                         ${reportData.description ? `
                         <div class="info-item full">
                             <div class="info-item-label">Description</div>
                             <div class="info-item-value">${reportData.description}</div>
                         </div>
                         ` : ''}
+                        ${reportData.objective ? `
+                        <div class="info-item full">
+                            <div class="info-item-label">Objective</div>
+                            <div class="info-item-value">${reportData.objective}</div>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
                 ` : ''}
+
+                <div class="info-section">
+                    <div class="info-section-title">Signature Information</div>
+                    <div style="display: flex; gap: 16px; align-items: center; background: var(--bg-tertiary); padding: 16px; border-radius: 8px;">
+                        <div style="width: 48px; height: 48px; background: var(--primary-100); color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                            &#128274;
+                        </div>
+                        <div>
+                            <div style="font-weight: 500; color: var(--text-primary); margin-bottom: 4px;">Leader's Signature Protected</div>
+                            <div style="font-size: 13px; color: var(--text-secondary);">The requesting leader's signature is hidden for security. Only your signature authorization is needed.</div>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="info-section" style="margin-bottom: 0;">
                     <div class="info-section-title">Your Response</div>

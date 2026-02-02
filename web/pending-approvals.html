@@ -214,7 +214,10 @@
         function updateUserUI() {
             document.getElementById('sidebarAvatar').textContent = (currentUser.name || currentUser.username || 'U').charAt(0).toUpperCase();
             document.getElementById('sidebarUserName').textContent = currentUser.name || currentUser.username || 'User';
-            document.getElementById('sidebarUserRole').textContent = currentUser.isAdmin ? 'Administrator' : 'Staff';
+
+            // Show role based on user type
+            const roleLabel = currentUser.isAdmin ? 'Administrator' : currentUser.isLeader ? 'Leader' : 'Staff';
+            document.getElementById('sidebarUserRole').textContent = roleLabel;
 
             if (currentUser.isAdmin) {
                 document.getElementById('adminSection').style.display = 'block';

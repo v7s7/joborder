@@ -289,12 +289,34 @@ const ADMIN_EMAILS = process.env.ADMIN_EMAILS
   ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim().toLowerCase())
   : [];
 
+// Parse leader emails from environment (Head of Section/Department)
+const LEADER_EMAILS = process.env.LEADER_EMAILS
+  ? process.env.LEADER_EMAILS.split(',').map(e => e.trim().toLowerCase())
+  : [];
+
 /**
  * Check if a user is an admin
  */
 function isAdmin(user) {
   if (!user || !user.email) return false;
   return ADMIN_EMAILS.includes(user.email.toLowerCase());
+}
+
+/**
+ * Check if a user is a leader (Head of Section/Department)
+ */
+function isLeader(user) {
+  if (!user || !user.email) return false;
+  return LEADER_EMAILS.includes(user.email.toLowerCase());
+}
+
+/**
+ * Get user role
+ */
+function getUserRole(user) {
+  if (isAdmin(user)) return 'admin';
+  if (isLeader(user)) return 'leader';
+  return 'staff';
 }
 
 // Admin guard middleware
@@ -306,6 +328,20 @@ const adminGuard = (req, res, next) => {
   // Check if user email is in admin list
   if (!isAdmin(req.session.user)) {
     return res.status(403).json({ error: 'Forbidden', message: 'Admin access required' });
+  }
+
+  next();
+};
+
+// Leader or Admin guard middleware
+const leaderGuard = (req, res, next) => {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const user = req.session.user;
+  if (!isAdmin(user) && !isLeader(user)) {
+    return res.status(403).json({ error: 'Forbidden', message: 'Leader access required' });
   }
 
   next();
@@ -498,10 +534,13 @@ app.post('/auth/logout', (req, res) => {
 
 app.get('/auth/me', (req, res) => {
   if (req.session && req.session.user) {
+    const user = req.session.user;
     return res.json({
       user: {
-        ...req.session.user,
-        isAdmin: isAdmin(req.session.user)
+        ...user,
+        isAdmin: isAdmin(user),
+        isLeader: isLeader(user),
+        role: getUserRole(user)
       }
     });
   }
@@ -745,20 +784,50 @@ app.post('/api/signature/setup', upload.single('signature'), (req, res) => {
 // =============================================================================
 
 app.get('/api/signatures', (req, res) => {
+  const user = req.session?.user;
+  const userIsAdmin = isAdmin(user);
+  const userEmail = user?.email?.toLowerCase();
+
   const approved = Object.entries(db.signatures)
     .filter(([_, sig]) => sig.status === 'approved')
-    .map(([userId, sig]) => ({
-      userId,
-      name: sig.name,
-      email: sig.email,
-      signatureUrl: `/signatures/${sig.filename}`
-    }));
+    .map(([userId, sig]) => {
+      // Only admins can see signature URLs
+      // Staff can see their own signature URL
+      const canSeeSignature = userIsAdmin || (userEmail && sig.email?.toLowerCase() === userEmail);
+
+      return {
+        userId,
+        name: sig.name,
+        email: sig.email,
+        signatureUrl: canSeeSignature ? `/signatures/${sig.filename}` : null,
+        hasSignature: true
+      };
+    });
 
   res.json({ signatures: approved });
 });
 
-// Serve signature images
-app.use('/signatures', express.static(SIGNATURES_DIR));
+// Serve signature images - only admins or signature owners can access
+app.use('/signatures', (req, res, next) => {
+  const user = req.session?.user;
+
+  // Allow admins full access
+  if (isAdmin(user)) {
+    return next();
+  }
+
+  // Check if user owns this signature
+  if (user?.email) {
+    const filename = req.path.replace('/', '');
+    const ownerSig = Object.values(db.signatures).find(sig => sig.filename === filename);
+    if (ownerSig && ownerSig.email?.toLowerCase() === user.email.toLowerCase()) {
+      return next();
+    }
+  }
+
+  // Deny access
+  return res.status(403).json({ error: 'Access denied' });
+}, express.static(SIGNATURES_DIR));
 
 // =============================================================================
 // DASHBOARD & REPORTS API ROUTES
