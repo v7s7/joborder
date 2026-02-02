@@ -210,9 +210,38 @@ function setLoggedIn(user) {
         loadPendingCount();
     }
 
-    // Load job number and signatures
-    loadJobNumber();
-    loadSignatures();
+    const isStaffOnly = !user.isAdmin && !user.isLeader;
+
+    const reportsNav = document.getElementById('reportsNav');
+    if (reportsNav && isStaffOnly) {
+        reportsNav.style.display = 'none';
+    }
+
+    const newJobOrderNav = document.getElementById('newJobOrderNav');
+    if (newJobOrderNav && isStaffOnly) {
+        newJobOrderNav.style.display = 'none';
+    }
+
+    const navApprovalLabel = document.getElementById('navApprovalLabel');
+    if (navApprovalLabel && isStaffOnly) {
+        navApprovalLabel.textContent = 'My Signature Requests';
+    }
+
+    const staffNotice = document.getElementById('staffNotice');
+    if (staffNotice) {
+        staffNotice.style.display = isStaffOnly ? 'flex' : 'none';
+    }
+
+    if (jobForm) {
+        jobForm.style.display = isStaffOnly ? 'none' : '';
+    }
+
+    if (!isStaffOnly) {
+        loadJobNumber();
+        loadSignatures();
+    }
+
+    loadApprovalsBadgeCount();
 }
 
 function showLoginModal() {
@@ -530,6 +559,32 @@ async function loadPendingCount() {
         }
     } catch (error) {
         console.error('Failed to load pending count:', error);
+    }
+}
+
+async function loadApprovalsBadgeCount() {
+    const badge = document.getElementById('approvalsBadge');
+    if (!badge) return;
+
+    try {
+        const response = await fetch('/api/approvals/pending', { credentials: 'include' });
+        if (!response.ok) {
+            badge.style.display = 'none';
+            return;
+        }
+
+        const data = await response.json();
+        const pendingCount = (data.approvals || []).filter(approval => approval.status === 'pending').length;
+
+        if (pendingCount > 0) {
+            badge.textContent = pendingCount;
+            badge.style.display = 'inline';
+        } else {
+            badge.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Failed to load approval notifications:', error);
+        badge.style.display = 'none';
     }
 }
 

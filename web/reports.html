@@ -27,17 +27,17 @@
                         <span class="nav-item-icon">&#128200;</span>
                         Dashboard
                     </a>
-                    <a href="/" class="nav-item">
+                    <a href="/" class="nav-item" id="newJobOrderNav">
                         <span class="nav-item-icon">&#128221;</span>
                         New Job Order
                     </a>
-                    <a href="/reports.html" class="nav-item active">
+                    <a href="/reports.html" class="nav-item active" id="reportsNav">
                         <span class="nav-item-icon">&#128202;</span>
                         Reports
                     </a>
                     <a href="/pending-approvals.html" class="nav-item">
                         <span class="nav-item-icon">&#128338;</span>
-                        Pending Approvals
+                        <span id="navApprovalLabel">Pending Approvals</span>
                         <span class="nav-item-badge" id="approvalsBadge" style="display: none;">0</span>
                     </a>
                 </div>
@@ -92,7 +92,17 @@
             </header>
 
             <!-- Page Content -->
-            <div class="page-content">
+            <div class="alert alert-info mb-4" id="reportsAccessNotice" style="display: none;">
+                <div class="alert-icon">&#128221;</div>
+                <div class="alert-content">
+                    <div class="alert-title">Reports Access</div>
+                    <div class="alert-message">
+                        Reports can only be generated and viewed by leaders or administrators.
+                        Please visit <a href="/pending-approvals.html">Pending Approvals</a> to review signature requests.
+                    </div>
+                </div>
+            </div>
+            <div class="page-content" id="reportsContent">
                 <!-- Filters Card -->
                 <div class="card mb-6">
                     <div class="card-header">
@@ -420,8 +430,35 @@
                 loadPendingCount();
             }
 
-            // Load reports
-            loadReports();
+            const isStaffOnly = !user.isAdmin && !user.isLeader;
+            const newJobNav = document.getElementById('newJobOrderNav');
+            if (newJobNav && isStaffOnly) {
+                newJobNav.style.display = 'none';
+            }
+
+            const reportsNav = document.getElementById('reportsNav');
+            if (reportsNav && isStaffOnly) {
+                reportsNav.style.display = 'none';
+            }
+
+            const navApprovalLabel = document.getElementById('navApprovalLabel');
+            if (navApprovalLabel && isStaffOnly) {
+                navApprovalLabel.textContent = 'My Signature Requests';
+            }
+
+            const reportsNotice = document.getElementById('reportsAccessNotice');
+            const reportsContent = document.getElementById('reportsContent');
+            if (reportsNotice && reportsContent) {
+                reportsNotice.style.display = isStaffOnly ? 'flex' : 'none';
+                reportsContent.style.display = isStaffOnly ? 'none' : 'block';
+            }
+
+            loadApprovalsBadgeCount();
+
+            if (!isStaffOnly) {
+                // Load reports
+                loadReports();
+            }
         }
 
         function showLoginModal() {
@@ -676,6 +713,32 @@
                 }
             } catch (error) {
                 console.error('Failed to load pending count');
+            }
+        }
+
+        async function loadApprovalsBadgeCount() {
+            const badge = document.getElementById('approvalsBadge');
+            if (!badge) return;
+
+            try {
+                const response = await fetch('/api/approvals/pending', { credentials: 'include' });
+                if (!response.ok) {
+                    badge.style.display = 'none';
+                    return;
+                }
+
+                const data = await response.json();
+                const pendingCount = (data.approvals || []).filter(approval => approval.status === 'pending').length;
+
+                if (pendingCount > 0) {
+                    badge.textContent = pendingCount;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Failed to load approvals count:', error);
+                badge.style.display = 'none';
             }
         }
 

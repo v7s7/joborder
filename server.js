@@ -290,9 +290,11 @@ const ADMIN_EMAILS = process.env.ADMIN_EMAILS
   : [];
 
 // Parse leader emails from environment (Head of Section/Department)
-const LEADER_EMAILS = process.env.LEADER_EMAILS
+const DEFAULT_LEADER_EMAILS = ['h.hayat@swd.bh'];
+const ENV_LEADER_EMAILS = process.env.LEADER_EMAILS
   ? process.env.LEADER_EMAILS.split(',').map(e => e.trim().toLowerCase())
   : [];
+const LEADER_EMAILS = [...new Set([...DEFAULT_LEADER_EMAILS, ...ENV_LEADER_EMAILS])];
 
 /**
  * Check if a user is an admin
@@ -509,7 +511,9 @@ app.post('/auth/login', async (req, res) => {
         ok: true,
         user: {
           ...req.session.user,
-          isAdmin: isAdmin(req.session.user)
+          isAdmin: isAdmin(req.session.user),
+          isLeader: isLeader(req.session.user),
+          role: getUserRole(req.session.user)
         }
       });
     } else {
@@ -933,7 +937,7 @@ app.get('/api/dashboard/stats', (req, res) => {
 });
 
 // Reports list with filtering
-app.get('/api/reports', (req, res) => {
+app.get('/api/reports', leaderGuard, (req, res) => {
   try {
     const reports = getAllReports();
 
@@ -955,7 +959,7 @@ app.get('/api/reports', (req, res) => {
 });
 
 // Serve generated reports for download
-app.use('/Generated_Reports', express.static(REPORTS_DIR));
+app.use('/Generated_Reports', leaderGuard, express.static(REPORTS_DIR));
 
 // =============================================================================
 // SIGNATURE APPROVAL API ROUTES
@@ -997,7 +1001,7 @@ app.get('/api/approvals/pending', (req, res) => {
 });
 
 // Request signature approval (when generating report with staff signature)
-app.post('/api/approvals/request', async (req, res) => {
+app.post('/api/approvals/request', leaderGuard, async (req, res) => {
   try {
     const user = req.session.user;
     if (!user) {
@@ -1176,7 +1180,7 @@ app.delete('/api/approvals/:token', (req, res) => {
 });
 
 // Generate report from approved request
-app.post('/api/approvals/:token/generate', async (req, res) => {
+app.post('/api/approvals/:token/generate', leaderGuard, async (req, res) => {
   try {
     const user = req.session.user;
     if (!user) {
@@ -1289,7 +1293,7 @@ app.get('/api/get-job-no', (req, res) => {
   res.json({ job_no: jobNo });
 });
 
-app.post('/api/generate', async (req, res) => {
+app.post('/api/generate', leaderGuard, async (req, res) => {
   try {
     const data = req.body;
     const jobNo = getNextJobNo();
