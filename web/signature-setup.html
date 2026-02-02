@@ -180,7 +180,7 @@
             <!-- Error State -->
             <div id="errorState" style="display: none;">
                 <div class="error-container">
-                    <div class="error-icon">&#10060;</div>
+                    <div class="error-icon"></div>
                     <h2 class="font-semibold mb-2">Invalid or Expired Link</h2>
                     <p class="text-secondary mb-6" id="errorMessage">This signature setup link is no longer valid.</p>
                     <a href="/" class="btn btn-primary">Go to Home</a>
@@ -190,7 +190,7 @@
             <!-- Success State -->
             <div id="successState" style="display: none;">
                 <div class="success-container">
-                    <div class="success-icon">&#9989;</div>
+                    <div class="success-icon"></div>
                     <h2 class="font-semibold mb-2">Signature Submitted!</h2>
                     <p class="text-secondary mb-6" id="successMessage">Your signature has been saved and is pending approval.</p>
                     <a href="/" class="btn btn-primary">Go to Home</a>
@@ -200,7 +200,7 @@
             <!-- Setup Form -->
             <div id="setupForm" style="display: none;">
                 <div class="setup-header">
-                    <div class="setup-header-icon">&#9999;</div>
+                    <div class="setup-header-icon"></div>
                     <h1 class="setup-header-title">Digital Signature Setup</h1>
                     <p class="setup-header-subtitle">Hello, <span id="userName">User</span>!</p>
                 </div>
@@ -215,17 +215,17 @@
                     <!-- Method Tabs -->
                     <div class="method-tabs">
                         <button class="method-tab active" data-method="upload">
-                            &#128230; Upload Image
+                             Upload Image
                         </button>
                         <button class="method-tab" data-method="draw">
-                            &#9998; Draw Signature
+                             Draw Signature
                         </button>
                     </div>
 
                     <!-- Upload Panel -->
                     <div class="method-panel active" id="panel-upload">
                         <div class="upload-zone" id="uploadZone">
-                            <div class="upload-zone-icon">&#128230;</div>
+                            <div class="upload-zone-icon"></div>
                             <div class="upload-zone-text">
                                 <strong>Click to upload</strong> or drag and drop<br>
                                 <span class="text-sm text-muted">PNG only, max 2MB</span>
@@ -249,7 +249,7 @@
                         </div>
                         <div class="flex gap-4 mt-4">
                             <button type="button" class="btn btn-secondary btn-full" onclick="clearCanvas()">
-                                &#128260; Clear
+                                 Clear
                             </button>
                         </div>
 
@@ -262,7 +262,7 @@
                     <!-- Submit Button -->
                     <div class="mt-6">
                         <button type="button" class="btn btn-primary btn-lg btn-full" id="submitBtn" onclick="submitSignature()">
-                            &#10004; Submit Signature
+                             Submit Signature
                         </button>
                     </div>
                 </div>
@@ -610,7 +610,7 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerHTML = `
-                <span>${type === 'success' ? '&#9989;' : type === 'error' ? '&#10060;' : '&#9888;'}</span>
+                <span>${type === 'success' ? '' : type === 'error' ? '' : ''}</span>
                 <span>${message}</span>
             `;
             container.appendChild(toast);

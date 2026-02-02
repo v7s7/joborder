@@ -210,9 +210,38 @@ function setLoggedIn(user) {
         loadPendingCount();
     }
 
-    // Load job number and signatures
-    loadJobNumber();
-    loadSignatures();
+    const isStaffOnly = !user.isAdmin && !user.isLeader;
+
+    const reportsNav = document.getElementById('reportsNav');
+    if (reportsNav && isStaffOnly) {
+        reportsNav.style.display = 'none';
+    }
+
+    const newJobOrderNav = document.getElementById('newJobOrderNav');
+    if (newJobOrderNav && isStaffOnly) {
+        newJobOrderNav.style.display = 'none';
+    }
+
+    const navApprovalLabel = document.getElementById('navApprovalLabel');
+    if (navApprovalLabel && isStaffOnly) {
+        navApprovalLabel.textContent = 'My Signature Requests';
+    }
+
+    const staffNotice = document.getElementById('staffNotice');
+    if (staffNotice) {
+        staffNotice.style.display = isStaffOnly ? 'flex' : 'none';
+    }
+
+    if (jobForm) {
+        jobForm.style.display = isStaffOnly ? 'none' : '';
+    }
+
+    if (!isStaffOnly) {
+        loadJobNumber();
+        loadSignatures();
+    }
+
+    loadApprovalsBadgeCount();
 }
 
 function showLoginModal() {
@@ -323,7 +352,7 @@ function updateSignaturePreview(type) {
             // Show placeholder for non-admins who can't see signatures
             preview.innerHTML = `
                 <div style="padding: 16px; text-align: center; background: var(--bg-tertiary); border-radius: 8px; color: var(--text-secondary);">
-                    <div style="font-size: 24px; margin-bottom: 8px;">&#128274;</div>
+                    <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">Restricted</div>
                     <div style="font-size: 12px;">${sig.name}'s Signature</div>
                     <div style="font-size: 11px; opacity: 0.7;">Signature protected</div>
                 </div>
@@ -533,6 +562,32 @@ async function loadPendingCount() {
     }
 }
 
+async function loadApprovalsBadgeCount() {
+    const badge = document.getElementById('approvalsBadge');
+    if (!badge) return;
+
+    try {
+        const response = await fetch('/api/approvals/pending', { credentials: 'include' });
+        if (!response.ok) {
+            badge.style.display = 'none';
+            return;
+        }
+
+        const data = await response.json();
+        const pendingCount = (data.approvals || []).filter(approval => approval.status === 'pending').length;
+
+        if (pendingCount > 0) {
+            badge.textContent = pendingCount;
+            badge.style.display = 'inline';
+        } else {
+            badge.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Failed to load approval notifications:', error);
+        badge.style.display = 'none';
+    }
+}
+
 // =============================================================================
 // TOAST NOTIFICATIONS
 // =============================================================================
@@ -544,11 +599,7 @@ function showToast(message, type = 'success') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
 
-    const icon = type === 'success' ? '&#9989;' : type === 'error' ? '&#10060;' : '&#9888;';
-    toast.innerHTML = `
-        <span>${icon}</span>
-        <span>${message}</span>
-    `;
+    toast.innerHTML = `<span>${message}</span>`;
 
     container.appendChild(toast);
 
