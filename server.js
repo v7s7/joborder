@@ -1330,21 +1330,18 @@ async function generateJobOrderReport(data) {
 
   // Handle duration highlighting (only one highlight per category)
   const durationFields = ['duration_days', 'duration_weeks', 'duration_months', 'duration_years'];
-
-  // Light blue fill to match template design (for non-selected cells)
-  const lightBlueFill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFBDD7EE' },
-    bgColor: { argb: 'FFBDD7EE' }
-  };
-
   // Yellow fill for selected cells
   const yellowFill = {
     type: 'pattern',
     pattern: 'solid',
     fgColor: { argb: 'FFFFFF00' },
     bgColor: { argb: 'FFFFFF00' }
+  };
+
+  // Explicit no-fill style for unselected cells
+  const clearFill = {
+    type: 'pattern',
+    pattern: 'none'
   };
 
   // Collect which cells should be highlighted yellow
@@ -1360,16 +1357,13 @@ async function generateJobOrderReport(data) {
       }
     }
   }
-
   // Apply fills to ALL cells from A9 to T9
   const allDurationCells = ['A9', 'B9', 'C9', 'D9', 'E9', 'F9', 'G9', 'H9', 'I9', 'J9', 'K9', 'L9', 'M9', 'N9', 'O9', 'P9', 'Q9', 'R9', 'S9', 'T9'];
   for (const cellAddr of allDurationCells) {
     const cell = ws.getCell(cellAddr);
-    if (cellsToHighlight.has(cellAddr)) {
-      cell.fill = yellowFill;
-    } else {
-      cell.fill = lightBlueFill;
-    }
+    const fill = cellsToHighlight.has(cellAddr) ? yellowFill : clearFill;
+    cell.style = { ...cell.style, fill };
+    cell.fill = fill;
   }
 
   const buildCheckboxRichText = (options, selectedKey) => {
