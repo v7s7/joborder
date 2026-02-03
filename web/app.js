@@ -139,6 +139,7 @@ function setupEventListeners() {
     if (settingsForm) {
         settingsForm.addEventListener('submit', handleSaveSettings);
     }
+    setupSavePathPicker();
 
     // Attachment handlers
     setupAttachmentHandlers();
@@ -358,6 +359,68 @@ async function handleSaveSettings(e) {
     }
 }
 
+function setupSavePathPicker() {
+    const browseBtn = document.getElementById('browseSavePathBtn');
+    const savePathInput = document.getElementById('savePathInput');
+    const savePathPicker = document.getElementById('savePathPicker');
+
+    if (!browseBtn || !savePathInput) return;
+
+    browseBtn.addEventListener('click', async () => {
+        if (window.showDirectoryPicker) {
+            try {
+                const handle = await window.showDirectoryPicker();
+                if (handle?.name) {
+                    savePathInput.value = handle.name;
+                }
+                return;
+            } catch (error) {
+                if (error?.name !== 'AbortError') {
+                    console.error('Failed to open directory picker:', error);
+                }
+            }
+        }
+
+        if (savePathPicker) {
+            savePathPicker.click();
+        }
+    });
+
+    if (savePathPicker) {
+        savePathPicker.addEventListener('change', () => {
+            const file = savePathPicker.files?.[0];
+            if (!file) return;
+            const path = getSelectedDirectoryPath(file);
+            if (path) {
+                savePathInput.value = path;
+            }
+            savePathPicker.value = '';
+        });
+    }
+}
+
+function getSelectedDirectoryPath(file) {
+    if (!file) {
+        return '';
+    }
+    if (file.path) {
+        if (file.webkitRelativePath) {
+            const normalizedPath = file.path.replace(/\\/g, '/');
+            if (normalizedPath.endsWith(file.webkitRelativePath)) {
+                const basePath = normalizedPath.slice(0, -file.webkitRelativePath.length);
+                return basePath.replace(/\/$/, '');
+            }
+        }
+        const lastSeparator = Math.max(file.path.lastIndexOf('/'), file.path.lastIndexOf('\\'));
+        return lastSeparator >= 0 ? file.path.slice(0, lastSeparator) : file.path;
+    }
+    if (file.webkitRelativePath) {
+        const segments = file.webkitRelativePath.split('/');
+        return segments.length > 1 ? segments[0] : file.webkitRelativePath;
+    }
+    return file.name || '';
+}
+
 // =============================================================================
 // JOB NUMBER
 // =============================================================================
@@ -402,13 +465,31 @@ function populateSignatureDropdowns() {
     const adminSelect = document.getElementById('admin_signature');
     const staffSelect = document.getElementById('staff_signature');
 
+    const sortedSignatures = [...signatures].sort((a, b) =>
+        (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+    );
+
     const defaultOption = '<option value="">-- Select Signature --</option>';
-    const options = signatures.map(sig =>
+    const options = sortedSignatures.map(sig =>
         `<option value="${sig.userId}" data-url="${sig.signatureUrl || ''}" data-has-signature="${sig.hasSignature}">${sig.name}</option>`
     ).join('');
 
     if (adminSelect) {
         adminSelect.innerHTML = defaultOption + options;
+
+        if (currentUser) {
+            const userEmail = currentUser.email?.toLowerCase();
+            const userMatch = sortedSignatures.find(sig => {
+                const signatureEmail = sig.email?.toLowerCase();
+                const signatureUserId = sig.userId?.toLowerCase();
+                return (userEmail && (signatureEmail === userEmail || signatureUserId === userEmail));
+            });
+
+            if (userMatch) {
+                adminSelect.value = userMatch.userId;
+                updateSignaturePreview('admin');
+            }
+        }
     }
     if (staffSelect) {
         staffSelect.innerHTML = defaultOption + options;

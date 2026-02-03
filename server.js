@@ -7,11 +7,16 @@ const cors = require('cors');
 const ldap = require('ldapjs');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const ExcelJS = require('exceljs');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
+
+const execFileAsync = promisify(execFile);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -52,6 +57,7 @@ function loadDatabase() {
 function ensureDbStructure(db) {
   if (!db.pendingApprovals) db.pendingApprovals = {};
   if (!db.userSettings) db.userSettings = {};
+  if (!db.reports) db.reports = [];
   return db;
 }
 
@@ -1004,6 +1010,55 @@ function getAllReports() {
   }
 }
 
+async function createFolderArchive(folderPath, folderName) {
+  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'joborder-'));
+  const zipPath = path.join(tempDir, `${folderName}.zip`);
+
+  if (process.platform === 'win32') {
+    const source = path.join(folderPath, '*');
+    await execFileAsync('powershell', [
+      '-NoProfile',
+      '-Command',
+      `Compress-Archive -Path "${source}" -DestinationPath "${zipPath}" -Force`
+    ]);
+  } else {
+    await execFileAsync('zip', ['-r', zipPath, '.'], { cwd: folderPath });
+  }
+
+  return { tempDir, zipPath };
+}
+
+function addReportEntry({ jobNo, folderName, fileName, reportData, staffInfo, createdBy }) {
+  const nowIso = new Date().toISOString();
+  const entry = {
+    jobNo,
+    folderName,
+    fileName,
+    createdAt: nowIso,
+    main_date: reportData.main_date || reportData.date || '',
+    work_type: reportData.work_type || '',
+    department: reportData.department || '',
+    objective: reportData.objective || '',
+    description: reportData.description || '',
+    duration_days: reportData.duration_days || '',
+    duration_weeks: reportData.duration_weeks || '',
+    duration_months: reportData.duration_months || '',
+    duration_years: reportData.duration_years || '',
+    start_date: reportData.start_date || '',
+    end_date: reportData.end_date || '',
+    note: reportData.note || '',
+    remarks: reportData.remarks || '',
+    staff_signature: staffInfo?.userId || reportData.staff_signature || '',
+    staff_name: staffInfo?.name || '',
+    staff_email: staffInfo?.email || '',
+    created_by: createdBy?.email || createdBy?.username || ''
+  };
+
+  db.reports.push(entry);
+  saveDatabase(db);
+  return entry;
+}
+
 // Dashboard statistics
 app.get('/api/dashboard/stats', (req, res) => {
   try {
@@ -1087,6 +1142,94 @@ app.get('/api/reports', leaderGuard, (req, res) => {
     console.error('Reports error:', err);
     res.status(500).json({ error: 'Failed to load reports' });
   }
+});
+
+app.get('/api/reports/:jobNo/download', leaderGuard, async (req, res) => {
+  const { jobNo } = req.params;
+  const folderName = req.query.folderName;
+
+  try {
+    if (folderName) {
+      const sanitizedFolder = path.basename(folderName);
+      const isValidFolder = /^Job_\d+_[A-Za-z]{3}_\d{2}$/.test(sanitizedFolder);
+      if (!isValidFolder) {
+        return res.status(400).json({ error: 'Invalid folder name' });
+      }
+
+      const folderPath = path.join(REPORTS_DIR, sanitizedFolder);
+      if (!fs.existsSync(folderPath) || !fs.statSync(folderPath).isDirectory()) {
+        return res.status(404).json({ error: 'Report folder not found' });
+      }
+
+      const { tempDir, zipPath } = await createFolderArchive(folderPath, sanitizedFolder);
+      res.download(zipPath, `${sanitizedFolder}.zip`, () => {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      });
+      return;
+    }
+
+    const fileName = `Job_${jobNo}.xlsx`;
+    const filePath = path.join(REPORTS_DIR, fileName);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    res.download(filePath, fileName);
+  } catch (err) {
+    console.error('Download report error:', err);
+    res.status(500).json({ error: 'Failed to download report' });
+  }
+});
+
+app.get('/api/staff/reports', leaderGuard, (req, res) => {
+  const approved = Object.entries(db.signatures)
+    .filter(([_, sig]) => sig.status === 'approved')
+    .map(([userId, sig]) => {
+      const count = db.reports.filter(report => report.staff_signature === userId).length;
+      return {
+        userId,
+        name: sig.name,
+        email: sig.email,
+        taskCount: count
+      };
+    })
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+
+  res.json({ staff: approved });
+});
+
+app.get('/api/staff/reports/:userId', leaderGuard, (req, res) => {
+  const userId = req.params.userId.toLowerCase();
+  const reports = db.reports
+    .filter(report => report.staff_signature === userId)
+    .map(report => {
+      const attachments = [];
+      if (report.folderName) {
+        const attachmentsDir = path.join(REPORTS_DIR, report.folderName, 'attachments');
+        if (fs.existsSync(attachmentsDir)) {
+          const files = fs.readdirSync(attachmentsDir);
+          files.forEach(file => {
+            const filePath = path.join(attachmentsDir, file);
+            const stat = fs.statSync(filePath);
+            attachments.push({
+              name: file,
+              size: stat.size,
+              url: `/Generated_Reports/${report.folderName}/attachments/${encodeURIComponent(file)}`
+            });
+          });
+        }
+      }
+
+      return {
+        ...report,
+        attachments,
+        downloadUrl: report.folderName
+          ? `/api/reports/${report.jobNo}/download?folderName=${encodeURIComponent(report.folderName)}`
+          : `/api/reports/${report.jobNo}/download`
+      };
+    });
+
+  res.json({ reports });
 });
 
 // Serve generated reports for download
@@ -1411,6 +1554,19 @@ app.post('/api/approvals/:token/generate', leaderGuard, async (req, res) => {
       : null;
 
     const { jobNo, folderName, folderPath, excelFileName, excelPath } = await generateJobOrderReport(reportData, [], existingFolder);
+
+    addReportEntry({
+      jobNo,
+      folderName,
+      fileName: excelFileName,
+      reportData: approval.reportData || {},
+      staffInfo: {
+        userId: approval.staffUserId,
+        name: approval.staffName,
+        email: approval.staffEmail
+      },
+      createdBy: user
+    });
 
     // Get user's custom save path
     const userEmail = user.email?.toLowerCase();
@@ -1786,6 +1942,21 @@ app.post('/api/generate', leaderGuard, uploadAttachments.array('attachments', 20
     const data = req.body;
     const attachments = req.files || [];
     const { jobNo, folderName, folderPath, excelFileName, excelPath } = await generateJobOrderReport(data, attachments);
+
+    const staffUserId = data.staff_signature ? data.staff_signature.toLowerCase() : '';
+    const staffSig = staffUserId ? db.signatures[staffUserId] : null;
+    if (staffUserId) {
+      addReportEntry({
+        jobNo,
+        folderName,
+        fileName: excelFileName,
+        reportData: data,
+        staffInfo: staffSig
+          ? { userId: staffUserId, name: staffSig.name, email: staffSig.email }
+          : { userId: staffUserId, name: '', email: '' },
+        createdBy: req.session.user
+      });
+    }
 
     // Get user's custom save path
     const userEmail = req.session.user?.email?.toLowerCase();
