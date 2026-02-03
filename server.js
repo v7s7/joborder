@@ -1329,9 +1329,9 @@ async function generateJobOrderReport(data) {
   }
 
   // Handle duration highlighting for row 9
-  // Template has all cells yellow by default, so we must:
-  // - Apply YELLOW to selected cells
-  // - Apply LIGHT BLUE to non-selected cells (to override template yellow)
+  // Template has NO fill on these cells, so we apply:
+  // - YELLOW fill to selected cells (user's choice)
+  // - LIGHT BLUE fill to non-selected cells (default background)
   // Cell mapping:
   // Days:   A9=1, B9=2, C9=3, D9=4, E9=5
   // Weeks:  F9=1, G9=2, H9=3, I9=4
