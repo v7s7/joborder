@@ -24,15 +24,51 @@
                 <div class="nav-section">
                     <div class="nav-section-title">Main Menu</div>
                     <a href="/dashboard.html" class="nav-item">
-                        Dashboard
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M3 10.5L12 3l9 7.5"></path>
+                                <path d="M5 9.5V21h14V9.5"></path>
+                            </svg>
+                        </span>
+                        <span>Dashboard</span>
                     </a>
                     <a href="/" class="nav-item" id="newJobOrderNav">
-                        New Job Order
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 5v14"></path>
+                                <path d="M5 12h14"></path>
+                                <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                            </svg>
+                        </span>
+                        <span>New Job Order</span>
                     </a>
                     <a href="/reports.html" class="nav-item" id="reportsNav">
-                        Reports
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M3 3v18h18"></path>
+                                <path d="M7 15v3"></path>
+                                <path d="M12 11v7"></path>
+                                <path d="M17 7v11"></path>
+                            </svg>
+                        </span>
+                        <span>Reports</span>
+                    </a>
+                    <a href="/staff-reports.html" class="nav-item">
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M16 11a4 4 0 1 0-8 0"></path>
+                                <path d="M4 21a8 8 0 0 1 16 0"></path>
+                            </svg>
+                        </span>
+                        <span>Staff Reports</span>
                     </a>
                     <a href="/pending-approvals.html" class="nav-item active">
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <path d="M12 7v5l3 3"></path>
+                            </svg>
+                        </span>
                         <span id="navApprovalLabel">Pending Approvals</span>
                         <span class="nav-item-badge" id="pendingCountBadge" style="display: none;">0</span>
                     </a>
@@ -41,7 +77,13 @@
                 <div class="nav-section" id="adminSection" style="display: none;">
                     <div class="nav-section-title">Administration</div>
                     <a href="/admin.html" class="nav-item">
-                        Signatures
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 3l7 4v5c0 5-3.5 9-7 9s-7-4-7-9V7l7-4z"></path>
+                                <path d="M9 12l2 2 4-4"></path>
+                            </svg>
+                        </span>
+                        <span>Signatures</span>
                     </a>
                 </div>
             </nav>
@@ -54,8 +96,24 @@
                         <div class="sidebar-user-role" id="sidebarUserRole">Staff</div>
                     </div>
                 </div>
+                <button class="btn btn-ghost btn-full mt-2" id="settingsBtn" style="justify-content: flex-start; gap: 12px;">
+                    <span class="sidebar-action-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path>
+                            <path d="M19.4 15a1 1 0 0 0 .2 1.1l1.1 1.1-2 3.4-1.5-.6a1 1 0 0 0-1 .1l-1.4.8-1.6-2.6a1 1 0 0 0-.9-.5h-2.6a1 1 0 0 0-.9.5l-1.6 2.6-1.4-.8a1 1 0 0 0-1-.1l-1.5.6-2-3.4 1.1-1.1a1 1 0 0 0 .2-1.1l-.6-1.5a1 1 0 0 0-.8-.6H3.5V8.1h1.6a1 1 0 0 0 .8-.6l.6-1.5a1 1 0 0 0-.2-1.1L5.2 3.8l2-3.4 1.5.6a1 1 0 0 0 1-.1l1.4-.8L12 2.7l1.6-2.6 1.4.8a1 1 0 0 0 1 .1l1.5-.6 2 3.4-1.1 1.1a1 1 0 0 0-.2 1.1l.6 1.5a1 1 0 0 0 .8.6h1.6v4.8h-1.6a1 1 0 0 0-.8.6z"></path>
+                        </svg>
+                    </span>
+                    <span>Settings</span>
+                </button>
                 <button class="btn btn-ghost btn-full mt-2" id="logoutBtn" style="justify-content: flex-start; gap: 12px;">
-                    Logout
+                    <span class="sidebar-action-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <path d="M16 17l5-5-5-5"></path>
+                            <path d="M21 12H9"></path>
+                        </svg>
+                    </span>
+                    <span>Logout</span>
                 </button>
             </div>
         </aside>
@@ -148,6 +206,36 @@
         </main>
     </div>
 
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Settings</h3>
+                <button class="modal-close" id="closeSettingsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="settingsForm">
+                    <div class="form-group">
+                        <label class="form-label">Save Reports To</label>
+                        <div class="flex gap-2">
+                            <input type="text" class="form-input" id="savePathInput" placeholder="e.g., \\\\server\\share\\Reports or C:\\Reports">
+                            <button type="button" class="btn btn-secondary" id="browseSavePathBtn">Browse</button>
+                        </div>
+                        <input type="file" id="savePathPicker" webkitdirectory directory style="display: none;">
+                        <small class="text-secondary" style="display: block; margin-top: 8px;">
+                            Enter a network path or local folder where generated reports will be saved.
+                            Leave empty to use the default server location.
+                        </small>
+                    </div>
+                    <div class="flex gap-4 mt-4">
+                        <button type="button" class="btn btn-secondary btn-full" id="cancelSettingsBtn">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-full">Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -159,6 +247,10 @@
         let allApprovals = [];
         let currentFilter = 'all';
 
+        const settingsModal = document.getElementById('settingsModal');
+        const settingsForm = document.getElementById('settingsForm');
+        const settingsBtn = document.getElementById('settingsBtn');
+
         // =============================================================================
         // INITIALIZATION
         // =============================================================================
@@ -166,6 +258,21 @@
             checkAuth();
             initTabs();
             document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            if (settingsBtn) {
+                settingsBtn.addEventListener('click', openSettingsModal);
+            }
+            const closeSettingsModal = document.getElementById('closeSettingsModal');
+            const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+            if (closeSettingsModal) {
+                closeSettingsModal.addEventListener('click', () => settingsModal.classList.remove('active'));
+            }
+            if (cancelSettingsBtn) {
+                cancelSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('active'));
+            }
+            if (settingsForm) {
+                settingsForm.addEventListener('submit', handleSaveSettings);
+            }
+            setupSavePathPicker();
         });
 
         function initTabs() {
@@ -250,6 +357,119 @@
                 document.querySelector('.page-title').textContent = 'My Signature Requests';
                 document.querySelector('.breadcrumb').innerHTML = '<span>Home</span><span class="breadcrumb-separator">/</span><span>My Signature Requests</span>';
             }
+        }
+
+        // =============================================================================
+        // USER SETTINGS
+        // =============================================================================
+        async function openSettingsModal() {
+            if (!settingsModal) return;
+
+            try {
+                const response = await fetch('/api/user/settings', { credentials: 'include' });
+                const data = await response.json();
+
+                if (data.success) {
+                    const savePathInput = document.getElementById('savePathInput');
+                    if (savePathInput) {
+                        savePathInput.value = data.settings.savePath || '';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            }
+
+            settingsModal.classList.add('active');
+        }
+
+        async function handleSaveSettings(e) {
+            e.preventDefault();
+
+            const savePathInput = document.getElementById('savePathInput');
+            const savePath = savePathInput ? savePathInput.value.trim() : '';
+
+            try {
+                const response = await fetch('/api/user/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ savePath })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Settings saved successfully!', 'success');
+                    settingsModal.classList.remove('active');
+                } else {
+                    showToast(data.error || 'Failed to save settings', 'error');
+                }
+            } catch (error) {
+                console.error('Failed to save settings:', error);
+                showToast('Failed to save settings', 'error');
+            }
+        }
+
+        function setupSavePathPicker() {
+            const browseBtn = document.getElementById('browseSavePathBtn');
+            const savePathInput = document.getElementById('savePathInput');
+            const savePathPicker = document.getElementById('savePathPicker');
+
+            if (!browseBtn || !savePathInput) return;
+
+            browseBtn.addEventListener('click', async () => {
+                if (window.showDirectoryPicker) {
+                    try {
+                        const handle = await window.showDirectoryPicker();
+                        if (handle?.name) {
+                            savePathInput.value = handle.name;
+                        }
+                        return;
+                    } catch (error) {
+                        if (error?.name !== 'AbortError') {
+                            console.error('Failed to open directory picker:', error);
+                        }
+                    }
+                }
+
+                if (savePathPicker) {
+                    savePathPicker.click();
+                }
+            });
+
+            if (savePathPicker) {
+                savePathPicker.addEventListener('change', () => {
+                    const file = savePathPicker.files?.[0];
+                    if (!file) return;
+                    const path = getSelectedDirectoryPath(file);
+                    if (path) {
+                        savePathInput.value = path;
+                    }
+                    savePathPicker.value = '';
+                });
+            }
+        }
+
+        function getSelectedDirectoryPath(file) {
+            if (!file) {
+                return '';
+            }
+            if (file.path) {
+                if (file.webkitRelativePath) {
+                    const normalizedPath = file.path.replace(/\\/g, '/');
+                    if (normalizedPath.endsWith(file.webkitRelativePath)) {
+                        const basePath = normalizedPath.slice(0, -file.webkitRelativePath.length);
+                        return basePath.replace(/\/$/, '');
+                    }
+                }
+                const lastSeparator = Math.max(file.path.lastIndexOf('/'), file.path.lastIndexOf('\\'));
+                return lastSeparator >= 0 ? file.path.slice(0, lastSeparator) : file.path;
+            }
+            if (file.webkitRelativePath) {
+                const segments = file.webkitRelativePath.split('/');
+                return segments.length > 1 ? segments[0] : file.webkitRelativePath;
+            }
+            return file.name || '';
         }
 
         // =============================================================================

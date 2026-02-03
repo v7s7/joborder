@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Reports - Job Order Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/dashboard.html" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">JO</div>
+                    <div>
+                        <div class="sidebar-logo-text">Job Orders</div>
+                        <div class="sidebar-logo-subtitle">Management System</div>
+                    </div>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main Menu</div>
+                    <a href="/dashboard.html" class="nav-item">
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M3 10.5L12 3l9 7.5"></path>
+                                <path d="M5 9.5V21h14V9.5"></path>
+                            </svg>
+                        </span>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="/" class="nav-item" id="newJobOrderNav">
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 5v14"></path>
+                                <path d="M5 12h14"></path>
+                                <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                            </svg>
+                        </span>
+                        <span>New Job Order</span>
+                    </a>
+                    <a href="/reports.html" class="nav-item" id="reportsNav">
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M3 3v18h18"></path>
+                                <path d="M7 15v3"></path>
+                                <path d="M12 11v7"></path>
+                                <path d="M17 7v11"></path>
+                            </svg>
+                        </span>
+                        <span>Reports</span>
+                    </a>
+                    <a href="/staff-reports.html" class="nav-item active">
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M16 11a4 4 0 1 0-8 0"></path>
+                                <path d="M4 21a8 8 0 0 1 16 0"></path>
+                            </svg>
+                        </span>
+                        <span>Staff Reports</span>
+                    </a>
+                    <a href="/pending-approvals.html" class="nav-item">
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <path d="M12 7v5l3 3"></path>
+                            </svg>
+                        </span>
+                        <span id="navApprovalLabel">Pending Approvals</span>
+                        <span class="nav-item-badge" id="approvalsBadge" style="display: none;">0</span>
+                    </a>
+                </div>
+
+                <div class="nav-section" id="adminSection" style="display: none;">
+                    <div class="nav-section-title">Administration</div>
+                    <a href="/admin.html" class="nav-item">
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 3l7 4v5c0 5-3.5 9-7 9s-7-4-7-9V7l7-4z"></path>
+                                <path d="M9 12l2 2 4-4"></path>
+                            </svg>
+                        </span>
+                        <span>Signatures</span>
+                        <span class="nav-item-badge" id="pendingBadge" style="display: none;">0</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user" id="sidebarUser">
+                    <div class="sidebar-user-avatar" id="sidebarAvatar">U</div>
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name" id="sidebarUserName">User</div>
+                        <div class="sidebar-user-role" id="sidebarUserRole">Staff</div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-full mt-2" id="settingsBtn" style="justify-content: flex-start; gap: 12px;">
+                    <span class="sidebar-action-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path>
+                            <path d="M19.4 15a1 1 0 0 0 .2 1.1l1.1 1.1-2 3.4-1.5-.6a1 1 0 0 0-1 .1l-1.4.8-1.6-2.6a1 1 0 0 0-.9-.5h-2.6a1 1 0 0 0-.9.5l-1.6 2.6-1.4-.8a1 1 0 0 0-1-.1l-1.5.6-2-3.4 1.1-1.1a1 1 0 0 0 .2-1.1l-.6-1.5a1 1 0 0 0-.8-.6H3.5V8.1h1.6a1 1 0 0 0 .8-.6l.6-1.5a1 1 0 0 0-.2-1.1L5.2 3.8l2-3.4 1.5.6a1 1 0 0 0 1-.1l1.4-.8L12 2.7l1.6-2.6 1.4.8a1 1 0 0 0 1 .1l1.5-.6 2 3.4-1.1 1.1a1 1 0 0 0-.2 1.1l.6 1.5a1 1 0 0 0 .8.6h1.6v4.8h-1.6a1 1 0 0 0-.8.6z"></path>
+                        </svg>
+                    </span>
+                    <span>Settings</span>
+                </button>
+                <button class="btn btn-ghost btn-full mt-2" id="logoutBtn" style="justify-content: flex-start; gap: 12px;">
+                    <span class="sidebar-action-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <path d="M16 17l5-5-5-5"></path>
+                            <path d="M21 12H9"></path>
+                        </svg>
+                    </span>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <button class="icon-btn mobile-menu-toggle" id="menuToggle" style="display: none;">Menu</button>
+                    <div>
+                        <h1 class="page-title">Staff Reports</h1>
+                        <div class="breadcrumb">
+                            <span>Home</span>
+                            <span class="breadcrumb-separator">/</span>
+                            <span>Staff Reports</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="top-bar-right">
+                    <div class="status-indicator ready" id="statusIndicator">
+                        <span class="status-dot"></span>
+                        <span id="statusText">System Ready</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="page-content">
+                <div class="card mb-6">
+                    <div class="card-header">
+                        <div class="card-title">Performance Summary</div>
+                        <button class="btn btn-secondary btn-sm" id="exportStaffReport" disabled>Export Staff Report</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="stats-grid" style="grid-template-columns: repeat(5, 1fr);">
+                            <div class="stat-card" style="--stat-color: var(--primary);">
+                                <div class="stat-card-icon primary"></div>
+                                <div class="stat-card-content">
+                                    <div class="stat-card-title">Total Tasks</div>
+                                    <div class="stat-card-value" id="summaryTotal">0</div>
+                                </div>
+                            </div>
+                            <div class="stat-card" style="--stat-color: var(--success);">
+                                <div class="stat-card-icon success"></div>
+                                <div class="stat-card-content">
+                                    <div class="stat-card-title">Completed</div>
+                                    <div class="stat-card-value" id="summaryCompleted">0</div>
+                                </div>
+                            </div>
+                            <div class="stat-card" style="--stat-color: var(--warning);">
+                                <div class="stat-card-icon warning"></div>
+                                <div class="stat-card-content">
+                                    <div class="stat-card-title">Overdue</div>
+                                    <div class="stat-card-value" id="summaryOverdue">0</div>
+                                </div>
+                            </div>
+                            <div class="stat-card" style="--stat-color: var(--info);">
+                                <div class="stat-card-icon info"></div>
+                                <div class="stat-card-content">
+                                    <div class="stat-card-title">On-Time %</div>
+                                    <div class="stat-card-value" id="summaryOnTime">0%</div>
+                                </div>
+                            </div>
+                            <div class="stat-card" style="--stat-color: var(--secondary);">
+                                <div class="stat-card-icon"></div>
+                                <div class="stat-card-content">
+                                    <div class="stat-card-title">Avg Delay</div>
+                                    <div class="stat-card-value" id="summaryDelay">0 days</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="text-secondary text-sm mb-2">Task Load by Month</div>
+                            <canvas id="taskLoadChart" height="120"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6" style="grid-template-columns: 360px 1fr;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Staff Members</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <input type="text" class="form-input" id="staffSearch" placeholder="Search staff...">
+                            </div>
+                            <div id="staffList">
+                                <div class="empty-state">
+                                    <div class="spinner"></div>
+                                    <p class="loading-text mt-4">Loading staff...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title" id="staffDetailTitle">Select a staff member</div>
+                        </div>
+                        <div class="card-body">
+                            <div id="staffDetail">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon"></div>
+                                    <div class="empty-state-title">No Staff Selected</div>
+                                    <div class="empty-state-description">Choose a staff member to view their job orders.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Login Required</h3>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary mb-4">Please sign in with your Active Directory credentials</p>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label class="form-label">Username or Email</label>
+                        <input type="text" class="form-input" id="loginUsername" placeholder="Enter your username..." required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="loginPassword" placeholder="Enter your password..." required>
+                    </div>
+                    <div class="alert alert-error" id="loginError" style="display: none;"></div>
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn">Sign In</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Settings</h3>
+                <button class="modal-close" id="closeSettingsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="settingsForm">
+                    <div class="form-group">
+                        <label class="form-label">Save Reports To</label>
+                        <div class="flex gap-2">
+                            <input type="text" class="form-input" id="savePathInput" placeholder="e.g., \\\\server\\share\\Reports or C:\\Reports">
+                            <button type="button" class="btn btn-secondary" id="browseSavePathBtn">Browse</button>
+                        </div>
+                        <input type="file" id="savePathPicker" webkitdirectory directory style="display: none;">
+                        <small class="text-secondary" style="display: block; margin-top: 8px;">
+                            Enter a network path or local folder where generated reports will be saved.
+                            Leave empty to use the default server location.
+                        </small>
+                    </div>
+                    <div class="flex gap-4 mt-4">
+                        <button type="button" class="btn btn-secondary btn-full" id="cancelSettingsBtn">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-full">Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        let currentUser = null;
+        let staffMembers = [];
+        let selectedStaffId = null;
+        let staffSummary = null;
+        let chartContext = null;
+
+        const loginModal = document.getElementById('loginModal');
+        const loginForm = document.getElementById('loginForm');
+        const loginError = document.getElementById('loginError');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const settingsForm = document.getElementById('settingsForm');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const exportStaffReportBtn = document.getElementById('exportStaffReport');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loginForm.addEventListener('submit', handleLogin);
+            logoutBtn.addEventListener('click', handleLogout);
+            if (settingsBtn) {
+                settingsBtn.addEventListener('click', openSettingsModal);
+            }
+            const closeSettingsModal = document.getElementById('closeSettingsModal');
+            const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+            if (closeSettingsModal) {
+                closeSettingsModal.addEventListener('click', () => settingsModal.classList.remove('active'));
+            }
+            if (cancelSettingsBtn) {
+                cancelSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('active'));
+            }
+            if (settingsForm) {
+                settingsForm.addEventListener('submit', handleSaveSettings);
+            }
+            setupSavePathPicker();
+            document.getElementById('staffSearch').addEventListener('input', handleStaffSearch);
+            if (exportStaffReportBtn) {
+                exportStaffReportBtn.addEventListener('click', exportStaffReport);
+            }
+        });
+
+        async function checkAuth() {
+            try {
+                const response = await fetch('/auth/me', { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    setLoggedIn(data.user);
+                    loadStaff();
+                    loadApprovalsBadgeCount();
+                    loadPendingCount();
+                } else {
+                    showLoginModal();
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                showLoginModal();
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!username || !password) {
+                showLoginError('Please enter both username and password');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.classList.add('btn-loading');
+            hideLoginError();
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.ok) {
+                    setLoggedIn(data.user);
+                    hideLoginModal();
+                    loginForm.reset();
+                    loadStaff();
+                } else {
+                    showLoginError(data.error || 'Invalid credentials');
+                }
+            } catch (error) {
+                showLoginError('Unable to connect to server');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.classList.remove('btn-loading');
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            currentUser = null;
+            showLoginModal();
+        }
+
+        function setLoggedIn(user) {
+            currentUser = user;
+            hideLoginModal();
+
+            const sidebarAvatar = document.getElementById('sidebarAvatar');
+            const sidebarUserName = document.getElementById('sidebarUserName');
+            const sidebarUserRole = document.getElementById('sidebarUserRole');
+
+            if (sidebarAvatar) {
+                sidebarAvatar.textContent = (user.name || user.username).charAt(0).toUpperCase();
+            }
+            if (sidebarUserName) {
+                sidebarUserName.textContent = user.name || user.username;
+            }
+            if (sidebarUserRole) {
+                const roleLabel = user.isAdmin ? 'Administrator' : user.isLeader ? 'Leader' : 'Staff';
+                sidebarUserRole.textContent = roleLabel;
+            }
+
+            const adminSection = document.getElementById('adminSection');
+            if (adminSection && user.isAdmin) {
+                adminSection.style.display = 'block';
+            }
+
+            const isStaffOnly = !user.isAdmin && !user.isLeader;
+            const reportsNav = document.getElementById('reportsNav');
+            const newJobOrderNav = document.getElementById('newJobOrderNav');
+            if (reportsNav && isStaffOnly) {
+                reportsNav.style.display = 'none';
+            }
+            if (newJobOrderNav && isStaffOnly) {
+                newJobOrderNav.style.display = 'none';
+            }
+        }
+
+        function showLoginModal() {
+            loginModal.classList.add('active');
+            const usernameInput = document.getElementById('loginUsername');
+            if (usernameInput) {
+                usernameInput.focus();
+            }
+        }
+
+        function hideLoginModal() {
+            loginModal.classList.remove('active');
+        }
+
+        function showLoginError(message) {
+            loginError.textContent = message;
+            loginError.style.display = 'block';
+        }
+
+        function hideLoginError() {
+            loginError.style.display = 'none';
+        }
+
+        async function loadStaff() {
+            const list = document.getElementById('staffList');
+            list.innerHTML = `
+                <div class="empty-state">
+                    <div class="spinner"></div>
+                    <p class="loading-text mt-4">Loading staff...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/staff/reports', { credentials: 'include' });
+                const data = await response.json();
+                staffMembers = data.staff || [];
+                renderStaffList(staffMembers);
+            } catch (error) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"></div>
+                        <div class="empty-state-title">Unable to load staff</div>
+                        <div class="empty-state-description">Please refresh and try again.</div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderStaffList(items) {
+            const list = document.getElementById('staffList');
+            if (!items.length) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"></div>
+                        <div class="empty-state-title">No staff found</div>
+                        <div class="empty-state-description">No approved signatures are available yet.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = items.map(staff => `
+                <button type="button" class="list-item ${selectedStaffId === staff.userId ? 'active' : ''}" onclick="selectStaff('${staff.userId}')">
+                    <div class="avatar">${(staff.name || 'U').charAt(0).toUpperCase()}</div>
+                    <div class="list-item-content">
+                        <div class="list-item-title">${staff.name || staff.userId}</div>
+                        <div class="list-item-subtitle">${staff.email || ''}</div>
+                    </div>
+                    <span class="badge badge-neutral">${staff.taskCount}</span>
+                </button>
+            `).join('');
+        }
+
+        function handleStaffSearch(e) {
+            const term = e.target.value.toLowerCase().trim();
+            if (!term) {
+                renderStaffList(staffMembers);
+                return;
+            }
+            const filtered = staffMembers.filter(staff => {
+                return (staff.name || '').toLowerCase().includes(term) ||
+                    (staff.email || '').toLowerCase().includes(term) ||
+                    (staff.userId || '').toLowerCase().includes(term);
+            });
+            renderStaffList(filtered);
+        }
+
+        async function selectStaff(userId) {
+            selectedStaffId = userId;
+            renderStaffList(staffMembers);
+            const detail = document.getElementById('staffDetail');
+            const title = document.getElementById('staffDetailTitle');
+            const staff = staffMembers.find(member => member.userId === userId);
+
+            if (staff) {
+                title.textContent = `${staff.name || staff.userId} • ${staff.taskCount} Jobs`;
+            }
+
+            detail.innerHTML = `
+                <div class="empty-state">
+                    <div class="spinner"></div>
+                    <p class="loading-text mt-4">Loading tasks...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/api/staff/reports/${userId}`, { credentials: 'include' });
+                const data = await response.json();
+                renderStaffTasks(data.reports || []);
+                await loadStaffSummary(userId);
+                if (exportStaffReportBtn) {
+                    exportStaffReportBtn.disabled = false;
+                }
+            } catch (error) {
+                detail.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"></div>
+                        <div class="empty-state-title">Unable to load tasks</div>
+                        <div class="empty-state-description">Please refresh and try again.</div>
+                    </div>
+                `;
+                updateSummaryCards({ totalTasks: 0, completedTasks: 0, overdueTasks: 0, onTimePercent: 0, averageDelay: 0 });
+                renderTaskLoadChart({});
+            }
+        }
+
+        async function loadStaffSummary(userId) {
+            try {
+                const response = await fetch(`/api/staff/reports/${userId}/summary`, { credentials: 'include' });
+                const data = await response.json();
+                staffSummary = data;
+                updateSummaryCards(data);
+                renderTaskLoadChart(data.loadByMonth || {});
+            } catch (error) {
+                console.error('Failed to load staff summary:', error);
+            }
+        }
+
+        function updateSummaryCards(summary) {
+            const totalEl = document.getElementById('summaryTotal');
+            const completedEl = document.getElementById('summaryCompleted');
+            const overdueEl = document.getElementById('summaryOverdue');
+            const onTimeEl = document.getElementById('summaryOnTime');
+            const delayEl = document.getElementById('summaryDelay');
+
+            if (totalEl) totalEl.textContent = summary.totalTasks || 0;
+            if (completedEl) completedEl.textContent = summary.completedTasks || 0;
+            if (overdueEl) overdueEl.textContent = summary.overdueTasks || 0;
+            if (onTimeEl) onTimeEl.textContent = `${summary.onTimePercent || 0}%`;
+            if (delayEl) delayEl.textContent = `${summary.averageDelay || 0} days`;
+        }
+
+        function renderTaskLoadChart(loadByMonth) {
+            const canvas = document.getElementById('taskLoadChart');
+            if (!canvas) return;
+
+            const parentWidth = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
+            if (parentWidth) {
+                canvas.width = parentWidth;
+            }
+
+            const labels = Object.keys(loadByMonth).sort();
+            const values = labels.map(label => loadByMonth[label]);
+            const ctx = canvas.getContext('2d');
+            chartContext = ctx;
+
+            const width = canvas.width || canvas.clientWidth;
+            const height = canvas.height || canvas.clientHeight;
+            const maxValue = Math.max(...values, 1);
+            const padding = 24;
+            const chartHeight = height - padding * 2;
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = '#334155';
+            ctx.font = '12px sans-serif';
+
+            if (!labels.length) {
+                ctx.fillText('No data yet.', padding, height / 2);
+                return;
+            }
+
+            const barWidth = Math.max((width - padding * 2) / labels.length - 12, 12);
+            labels.forEach((label, index) => {
+                const value = values[index];
+                const barHeight = (value / maxValue) * chartHeight;
+                const x = padding + index * (barWidth + 12);
+                const y = height - padding - barHeight;
+
+                ctx.fillStyle = '#4f46e5';
+                ctx.fillRect(x, y, barWidth, barHeight);
+
+                ctx.fillStyle = '#64748b';
+                ctx.fillText(label.replace('-', '/'), x, height - padding + 14);
+                ctx.fillStyle = '#0f172a';
+                ctx.fillText(String(value), x, y - 6);
+            });
+        }
+
+        async function markComplete(jobNo) {
+            if (!selectedStaffId) return;
+            try {
+                const response = await fetch(`/api/staff/reports/${selectedStaffId}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ jobNo })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Marked as completed!', 'success');
+                    await selectStaff(selectedStaffId);
+                } else {
+                    showToast(data.error || 'Failed to mark complete', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to mark complete', 'error');
+            }
+        }
+
+        async function saveNotes(jobNo) {
+            if (!selectedStaffId) return;
+            const notesField = document.querySelector(`.staff-notes[data-job="${jobNo}"]`);
+            const notes = notesField ? notesField.value : '';
+            try {
+                const response = await fetch(`/api/staff/reports/${selectedStaffId}/notes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ jobNo, notes })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Notes saved!', 'success');
+                } else {
+                    showToast(data.error || 'Failed to save notes', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to save notes', 'error');
+            }
+        }
+
+        function exportStaffReport() {
+            if (!selectedStaffId) return;
+            window.location.href = `/api/staff/reports/${selectedStaffId}/export`;
+        }
+
+        function renderStaffTasks(reports) {
+            const detail = document.getElementById('staffDetail');
+            if (!reports.length) {
+                detail.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"></div>
+                        <div class="empty-state-title">No jobs assigned</div>
+                        <div class="empty-state-description">This staff member has no job orders yet.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            detail.innerHTML = `
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Job #</th>
+                                <th>Date</th>
+                                <th>Department</th>
+                                <th>Type</th>
+                                <th>Objective</th>
+                                <th>Status</th>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th>Remaining</th>
+                                <th>Attachments</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${reports.map(report => `
+                                <tr>
+                                    <td><strong>${report.jobNo}</strong></td>
+                                    <td>${formatDate(report.main_date || report.createdAt)}</td>
+                                    <td>${report.department || '-'}</td>
+                                    <td>${report.work_type || '-'}</td>
+                                    <td>${report.objective || report.description || '-'}</td>
+                                    <td>${report.completed_at ? 'Completed' : 'In Progress'}</td>
+                                    <td>${formatDate(report.start_date)}</td>
+                                    <td>${formatDate(getEndDate(report))}</td>
+                                    <td>${formatRemaining(getEndDate(report))}</td>
+                                    <td>
+                                        ${report.attachments?.length
+                                            ? report.attachments.map(att => `<a href="${att.url}" class="text-link" target="_blank">${att.name}</a>`).join('<br>')
+                                            : '<span class="text-secondary">None</span>'}
+                                    </td>
+                                    <td>
+                                        <textarea class="form-textarea staff-notes" data-job="${report.jobNo}" rows="2" placeholder="Add review notes...">${report.review_notes || ''}</textarea>
+                                        <button class="btn btn-secondary btn-sm mt-2" onclick="saveNotes('${report.jobNo}')">Save Notes</button>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="${report.downloadUrl}" class="btn btn-ghost btn-sm">Download</a>
+                                        ${report.completed_at
+                                            ? `<div class="text-secondary text-xs mt-2">Completed ${formatDate(report.completed_at)}</div>`
+                                            : `<button class="btn btn-success btn-sm mt-2" onclick="markComplete('${report.jobNo}')">Mark Complete</button>`}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function getEndDate(report) {
+            if (report.end_date) {
+                return report.end_date;
+            }
+            if (!report.start_date) {
+                return '';
+            }
+
+            const start = new Date(report.start_date);
+            if (Number.isNaN(start.getTime())) {
+                return '';
+            }
+
+            const end = new Date(start);
+            const days = parseInt(report.duration_days || '0', 10);
+            const weeks = parseInt(report.duration_weeks || '0', 10);
+            const months = parseInt(report.duration_months || '0', 10);
+            const years = parseInt(report.duration_years || '0', 10);
+
+            if (days) {
+                end.setDate(end.getDate() + days);
+            }
+            if (weeks) {
+                end.setDate(end.getDate() + (weeks * 7));
+            }
+            if (months) {
+                end.setMonth(end.getMonth() + months);
+            }
+            if (years) {
+                end.setFullYear(end.getFullYear() + years);
+            }
+
+            return end.toISOString().split('T')[0];
+        }
+
+        function formatRemaining(endDateStr) {
+            if (!endDateStr) return '-';
+            const endDate = new Date(endDateStr);
+            if (Number.isNaN(endDate.getTime())) return '-';
+
+            const today = new Date();
+            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const diffMs = endDate - startOfToday;
+            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 0) {
+                return `${Math.abs(diffDays)} day(s) overdue`;
+            }
+            if (diffDays === 0) {
+                return 'Due today';
+            }
+            return `${diffDays} day(s) left`;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            if (Number.isNaN(date.getTime())) return dateStr;
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        async function loadPendingCount() {
+            try {
+                const response = await fetch('/api/admin/pending-signatures', { credentials: 'include' });
+                const data = await response.json();
+                const count = data.signatures?.length || 0;
+                const badge = document.getElementById('pendingBadge');
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Failed to load pending count');
+            }
+        }
+
+        async function loadApprovalsBadgeCount() {
+            const badge = document.getElementById('approvalsBadge');
+            if (!badge) return;
+
+            try {
+                const response = await fetch('/api/approvals/pending', { credentials: 'include' });
+                if (!response.ok) {
+                    badge.style.display = 'none';
+                    return;
+                }
+
+                const data = await response.json();
+                const pendingCount = (data.approvals || []).filter(approval => approval.status === 'pending').length;
+
+                if (pendingCount > 0) {
+                    badge.textContent = pendingCount;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Failed to load approvals count:', error);
+                badge.style.display = 'none';
+            }
+        }
+
+        async function openSettingsModal() {
+            if (!settingsModal) return;
+
+            try {
+                const response = await fetch('/api/user/settings', { credentials: 'include' });
+                const data = await response.json();
+
+                if (data.success) {
+                    const savePathInput = document.getElementById('savePathInput');
+                    if (savePathInput) {
+                        savePathInput.value = data.settings.savePath || '';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            }
+
+            settingsModal.classList.add('active');
+        }
+
+        async function handleSaveSettings(e) {
+            e.preventDefault();
+
+            const savePathInput = document.getElementById('savePathInput');
+            const savePath = savePathInput ? savePathInput.value.trim() : '';
+
+            try {
+                const response = await fetch('/api/user/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ savePath })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Settings saved successfully!', 'success');
+                    settingsModal.classList.remove('active');
+                } else {
+                    showToast(data.error || 'Failed to save settings', 'error');
+                }
+            } catch (error) {
+                console.error('Failed to save settings:', error);
+                showToast('Failed to save settings', 'error');
+            }
+        }
+
+        function setupSavePathPicker() {
+            const browseBtn = document.getElementById('browseSavePathBtn');
+            const savePathInput = document.getElementById('savePathInput');
+            const savePathPicker = document.getElementById('savePathPicker');
+
+            if (!browseBtn || !savePathInput) return;
+
+            browseBtn.addEventListener('click', async () => {
+                if (window.showDirectoryPicker) {
+                    try {
+                        const handle = await window.showDirectoryPicker();
+                        if (handle?.name) {
+                            savePathInput.value = handle.name;
+                        }
+                        return;
+                    } catch (error) {
+                        if (error?.name !== 'AbortError') {
+                            console.error('Failed to open directory picker:', error);
+                        }
+                    }
+                }
+
+                if (savePathPicker) {
+                    savePathPicker.click();
+                }
+            });
+
+            if (savePathPicker) {
+                savePathPicker.addEventListener('change', () => {
+                    const file = savePathPicker.files?.[0];
+                    if (!file) return;
+                    const path = getSelectedDirectoryPath(file);
+                    if (path) {
+                        savePathInput.value = path;
+                    }
+                    savePathPicker.value = '';
+                });
+            }
+        }
+
+        function getSelectedDirectoryPath(file) {
+            if (!file) {
+                return '';
+            }
+            if (file.path) {
+                if (file.webkitRelativePath) {
+                    const normalizedPath = file.path.replace(/\\/g, '/');
+                    if (normalizedPath.endsWith(file.webkitRelativePath)) {
+                        const basePath = normalizedPath.slice(0, -file.webkitRelativePath.length);
+                        return basePath.replace(/\/$/, '');
+                    }
+                }
+                const lastSeparator = Math.max(file.path.lastIndexOf('/'), file.path.lastIndexOf('\\'));
+                return lastSeparator >= 0 ? file.path.slice(0, lastSeparator) : file.path;
+            }
+            if (file.webkitRelativePath) {
+                const segments = file.webkitRelativePath.split('/');
+                return segments.length > 1 ? segments[0] : file.webkitRelativePath;
+            }
+            return file.name || '';
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'toastSlideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

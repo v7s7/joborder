@@ -7,11 +7,16 @@ const cors = require('cors');
 const ldap = require('ldapjs');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const ExcelJS = require('exceljs');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
+
+const execFileAsync = promisify(execFile);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -52,6 +57,7 @@ function loadDatabase() {
 function ensureDbStructure(db) {
   if (!db.pendingApprovals) db.pendingApprovals = {};
   if (!db.userSettings) db.userSettings = {};
+  if (!db.reports) db.reports = [];
   return db;
 }
 
@@ -1004,6 +1010,58 @@ function getAllReports() {
   }
 }
 
+async function createFolderArchive(folderPath, folderName) {
+  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'joborder-'));
+  const zipPath = path.join(tempDir, `${folderName}.zip`);
+
+  if (process.platform === 'win32') {
+    const source = path.join(folderPath, '*');
+    await execFileAsync('powershell', [
+      '-NoProfile',
+      '-Command',
+      `Compress-Archive -Path "${source}" -DestinationPath "${zipPath}" -Force`
+    ]);
+  } else {
+    await execFileAsync('zip', ['-r', zipPath, '.'], { cwd: folderPath });
+  }
+
+  return { tempDir, zipPath };
+}
+
+function addReportEntry({ jobNo, folderName, fileName, reportData, staffInfo, createdBy }) {
+  const nowIso = new Date().toISOString();
+  const entry = {
+    jobNo,
+    folderName,
+    fileName,
+    createdAt: nowIso,
+    main_date: reportData.main_date || reportData.date || '',
+    work_type: reportData.work_type || '',
+    department: reportData.department || '',
+    objective: reportData.objective || '',
+    description: reportData.description || '',
+    duration_days: reportData.duration_days || '',
+    duration_weeks: reportData.duration_weeks || '',
+    duration_months: reportData.duration_months || '',
+    duration_years: reportData.duration_years || '',
+    start_date: reportData.start_date || '',
+    end_date: reportData.end_date || '',
+    note: reportData.note || '',
+    remarks: reportData.remarks || '',
+    staff_signature: staffInfo?.userId || reportData.staff_signature || '',
+    staff_name: staffInfo?.name || '',
+    staff_email: staffInfo?.email || '',
+    created_by: createdBy?.email || createdBy?.username || '',
+    completed_at: null,
+    completed_by: null,
+    review_notes: ''
+  };
+
+  db.reports.push(entry);
+  saveDatabase(db);
+  return entry;
+}
+
 // Dashboard statistics
 app.get('/api/dashboard/stats', (req, res) => {
   try {
@@ -1087,6 +1145,245 @@ app.get('/api/reports', leaderGuard, (req, res) => {
     console.error('Reports error:', err);
     res.status(500).json({ error: 'Failed to load reports' });
   }
+});
+
+app.get('/api/reports/:jobNo/download', leaderGuard, async (req, res) => {
+  const { jobNo } = req.params;
+  const folderName = req.query.folderName;
+
+  try {
+    if (folderName) {
+      const sanitizedFolder = path.basename(folderName);
+      const isValidFolder = /^Job_\d+_[A-Za-z]{3}_\d{2}$/.test(sanitizedFolder);
+      if (!isValidFolder) {
+        return res.status(400).json({ error: 'Invalid folder name' });
+      }
+
+      const folderPath = path.join(REPORTS_DIR, sanitizedFolder);
+      if (!fs.existsSync(folderPath) || !fs.statSync(folderPath).isDirectory()) {
+        return res.status(404).json({ error: 'Report folder not found' });
+      }
+
+      const { tempDir, zipPath } = await createFolderArchive(folderPath, sanitizedFolder);
+      res.download(zipPath, `${sanitizedFolder}.zip`, () => {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      });
+      return;
+    }
+
+    const fileName = `Job_${jobNo}.xlsx`;
+    const filePath = path.join(REPORTS_DIR, fileName);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    res.download(filePath, fileName);
+  } catch (err) {
+    console.error('Download report error:', err);
+    res.status(500).json({ error: 'Failed to download report' });
+  }
+});
+
+app.get('/api/staff/reports', leaderGuard, (req, res) => {
+  const approved = Object.entries(db.signatures)
+    .filter(([_, sig]) => sig.status === 'approved')
+    .map(([userId, sig]) => {
+      const count = db.reports.filter(report => report.staff_signature === userId).length;
+      return {
+        userId,
+        name: sig.name,
+        email: sig.email,
+        taskCount: count
+      };
+    })
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+
+  res.json({ staff: approved });
+});
+
+app.get('/api/staff/reports/:userId', leaderGuard, (req, res) => {
+  const userId = req.params.userId.toLowerCase();
+  const reports = db.reports
+    .filter(report => report.staff_signature === userId)
+    .map(report => {
+      const attachments = [];
+      if (report.folderName) {
+        const attachmentsDir = path.join(REPORTS_DIR, report.folderName, 'attachments');
+        if (fs.existsSync(attachmentsDir)) {
+          const files = fs.readdirSync(attachmentsDir);
+          files.forEach(file => {
+            const filePath = path.join(attachmentsDir, file);
+            const stat = fs.statSync(filePath);
+            attachments.push({
+              name: file,
+              size: stat.size,
+              url: `/Generated_Reports/${report.folderName}/attachments/${encodeURIComponent(file)}`
+            });
+          });
+        }
+      }
+
+      return {
+        ...report,
+        attachments,
+        downloadUrl: report.folderName
+          ? `/api/reports/${report.jobNo}/download?folderName=${encodeURIComponent(report.folderName)}`
+          : `/api/reports/${report.jobNo}/download`
+      };
+    });
+
+  res.json({ reports });
+});
+
+app.get('/api/staff/reports/:userId/summary', leaderGuard, (req, res) => {
+  const userId = req.params.userId.toLowerCase();
+  const reports = db.reports.filter(report => report.staff_signature === userId);
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const computeEndDate = report => {
+    if (report.end_date) return report.end_date;
+    if (!report.start_date) return '';
+    const start = new Date(report.start_date);
+    if (Number.isNaN(start.getTime())) return '';
+    const end = new Date(start);
+    const days = parseInt(report.duration_days || '0', 10);
+    const weeks = parseInt(report.duration_weeks || '0', 10);
+    const months = parseInt(report.duration_months || '0', 10);
+    const years = parseInt(report.duration_years || '0', 10);
+    if (days) end.setDate(end.getDate() + days);
+    if (weeks) end.setDate(end.getDate() + (weeks * 7));
+    if (months) end.setMonth(end.getMonth() + months);
+    if (years) end.setFullYear(end.getFullYear() + years);
+    return end.toISOString().split('T')[0];
+  };
+
+  let completedCount = 0;
+  let overdueCount = 0;
+  let onTimeCount = 0;
+  let delayedTotal = 0;
+  let delayedItems = 0;
+
+  reports.forEach(report => {
+    if (report.completed_at) {
+      completedCount += 1;
+    }
+
+    const endDateStr = computeEndDate(report);
+    const endDate = endDateStr ? new Date(endDateStr) : null;
+    if (endDate && !Number.isNaN(endDate.getTime())) {
+      if (!report.completed_at && endDate < startOfToday) {
+        overdueCount += 1;
+      }
+      if (report.completed_at) {
+        const completedAt = new Date(report.completed_at);
+        if (!Number.isNaN(completedAt.getTime()) && completedAt <= endDate) {
+          onTimeCount += 1;
+        } else if (!Number.isNaN(completedAt.getTime())) {
+          delayedItems += 1;
+          delayedTotal += Math.ceil((completedAt - endDate) / (1000 * 60 * 60 * 24));
+        }
+      }
+    }
+  });
+
+  const onTimePercent = completedCount ? Math.round((onTimeCount / completedCount) * 100) : 0;
+  const averageDelay = delayedItems ? Math.round((delayedTotal / delayedItems) * 10) / 10 : 0;
+
+  const loadByMonth = {};
+  reports.forEach(report => {
+    const dateStr = report.main_date || report.createdAt;
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    loadByMonth[key] = (loadByMonth[key] || 0) + 1;
+  });
+
+  res.json({
+    totalTasks: reports.length,
+    completedTasks: completedCount,
+    overdueTasks: overdueCount,
+    onTimePercent,
+    averageDelay,
+    loadByMonth
+  });
+});
+
+app.post('/api/staff/reports/:userId/complete', leaderGuard, (req, res) => {
+  const userId = req.params.userId.toLowerCase();
+  const { jobNo } = req.body || {};
+  if (!jobNo) {
+    return res.status(400).json({ error: 'Job number is required' });
+  }
+
+  const report = db.reports.find(item => item.staff_signature === userId && `${item.jobNo}` === `${jobNo}`);
+  if (!report) {
+    return res.status(404).json({ error: 'Report not found' });
+  }
+
+  report.completed_at = new Date().toISOString();
+  report.completed_by = req.session.user?.email || req.session.user?.username || '';
+  saveDatabase(db);
+
+  res.json({ success: true, report });
+});
+
+app.post('/api/staff/reports/:userId/notes', leaderGuard, (req, res) => {
+  const userId = req.params.userId.toLowerCase();
+  const { jobNo, notes } = req.body || {};
+  if (!jobNo) {
+    return res.status(400).json({ error: 'Job number is required' });
+  }
+
+  const report = db.reports.find(item => item.staff_signature === userId && `${item.jobNo}` === `${jobNo}`);
+  if (!report) {
+    return res.status(404).json({ error: 'Report not found' });
+  }
+
+  report.review_notes = `${notes || ''}`.trim();
+  saveDatabase(db);
+  res.json({ success: true, report });
+});
+
+app.get('/api/staff/reports/:userId/export', leaderGuard, (req, res) => {
+  const userId = req.params.userId.toLowerCase();
+  const reports = db.reports.filter(report => report.staff_signature === userId);
+
+  const headers = [
+    'Job #',
+    'Main Date',
+    'Department',
+    'Type',
+    'Objective',
+    'Start Date',
+    'End Date',
+    'Completed At',
+    'Completed By',
+    'Review Notes'
+  ];
+
+  const rows = reports.map(report => [
+    report.jobNo,
+    report.main_date || '',
+    report.department || '',
+    report.work_type || '',
+    report.objective || report.description || '',
+    report.start_date || '',
+    report.end_date || '',
+    report.completed_at || '',
+    report.completed_by || '',
+    (report.review_notes || '').replace(/"/g, '""')
+  ]);
+
+  let csv = headers.join(',') + '\n';
+  rows.forEach(row => {
+    csv += row.map(value => `"${value || ''}"`).join(',') + '\n';
+  });
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="staff_report_${userId}.csv"`);
+  res.send(csv);
 });
 
 // Serve generated reports for download
@@ -1411,6 +1708,19 @@ app.post('/api/approvals/:token/generate', leaderGuard, async (req, res) => {
       : null;
 
     const { jobNo, folderName, folderPath, excelFileName, excelPath } = await generateJobOrderReport(reportData, [], existingFolder);
+
+    addReportEntry({
+      jobNo,
+      folderName,
+      fileName: excelFileName,
+      reportData: approval.reportData || {},
+      staffInfo: {
+        userId: approval.staffUserId,
+        name: approval.staffName,
+        email: approval.staffEmail
+      },
+      createdBy: user
+    });
 
     // Get user's custom save path
     const userEmail = user.email?.toLowerCase();
@@ -1786,6 +2096,21 @@ app.post('/api/generate', leaderGuard, uploadAttachments.array('attachments', 20
     const data = req.body;
     const attachments = req.files || [];
     const { jobNo, folderName, folderPath, excelFileName, excelPath } = await generateJobOrderReport(data, attachments);
+
+    const staffUserId = data.staff_signature ? data.staff_signature.toLowerCase() : '';
+    const staffSig = staffUserId ? db.signatures[staffUserId] : null;
+    if (staffUserId) {
+      addReportEntry({
+        jobNo,
+        folderName,
+        fileName: excelFileName,
+        reportData: data,
+        staffInfo: staffSig
+          ? { userId: staffUserId, name: staffSig.name, email: staffSig.email }
+          : { userId: staffUserId, name: '', email: '' },
+        createdBy: req.session.user
+      });
+    }
 
     // Get user's custom save path
     const userEmail = req.session.user?.email?.toLowerCase();
