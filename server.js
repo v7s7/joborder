@@ -7,11 +7,16 @@ const cors = require('cors');
 const ldap = require('ldapjs');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const ExcelJS = require('exceljs');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
+
+const execFileAsync = promisify(execFile);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1004,6 +1009,24 @@ function getAllReports() {
   }
 }
 
+async function createFolderArchive(folderPath, folderName) {
+  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'joborder-'));
+  const zipPath = path.join(tempDir, `${folderName}.zip`);
+
+  if (process.platform === 'win32') {
+    const source = path.join(folderPath, '*');
+    await execFileAsync('powershell', [
+      '-NoProfile',
+      '-Command',
+      `Compress-Archive -Path "${source}" -DestinationPath "${zipPath}" -Force`
+    ]);
+  } else {
+    await execFileAsync('zip', ['-r', zipPath, '.'], { cwd: folderPath });
+  }
+
+  return { tempDir, zipPath };
+}
+
 // Dashboard statistics
 app.get('/api/dashboard/stats', (req, res) => {
   try {
@@ -1086,6 +1109,43 @@ app.get('/api/reports', leaderGuard, (req, res) => {
   } catch (err) {
     console.error('Reports error:', err);
     res.status(500).json({ error: 'Failed to load reports' });
+  }
+});
+
+app.get('/api/reports/:jobNo/download', leaderGuard, async (req, res) => {
+  const { jobNo } = req.params;
+  const folderName = req.query.folderName;
+
+  try {
+    if (folderName) {
+      const sanitizedFolder = path.basename(folderName);
+      const isValidFolder = /^Job_\d+_[A-Za-z]{3}_\d{2}$/.test(sanitizedFolder);
+      if (!isValidFolder) {
+        return res.status(400).json({ error: 'Invalid folder name' });
+      }
+
+      const folderPath = path.join(REPORTS_DIR, sanitizedFolder);
+      if (!fs.existsSync(folderPath) || !fs.statSync(folderPath).isDirectory()) {
+        return res.status(404).json({ error: 'Report folder not found' });
+      }
+
+      const { tempDir, zipPath } = await createFolderArchive(folderPath, sanitizedFolder);
+      res.download(zipPath, `${sanitizedFolder}.zip`, () => {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      });
+      return;
+    }
+
+    const fileName = `Job_${jobNo}.xlsx`;
+    const filePath = path.join(REPORTS_DIR, fileName);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    res.download(filePath, fileName);
+  } catch (err) {
+    console.error('Download report error:', err);
+    res.status(500).json({ error: 'Failed to download report' });
   }
 });
 

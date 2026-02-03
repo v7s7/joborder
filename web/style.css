@@ -261,6 +261,23 @@ body {
     flex-shrink: 0;
 }
 
+.sidebar-action-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-item-icon svg,
+.sidebar-action-icon svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 .nav-item-badge {
     margin-left: auto;
     background: var(--error);
