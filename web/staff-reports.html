@@ -516,6 +516,9 @@
                                 <th>Department</th>
                                 <th>Type</th>
                                 <th>Objective</th>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th>Remaining</th>
                                 <th>Attachments</th>
                                 <th>Download</th>
                             </tr>
@@ -528,6 +531,9 @@
                                     <td>${report.department || '-'}</td>
                                     <td>${report.work_type || '-'}</td>
                                     <td>${report.objective || report.description || '-'}</td>
+                                    <td>${formatDate(report.start_date)}</td>
+                                    <td>${formatDate(getEndDate(report))}</td>
+                                    <td>${formatRemaining(getEndDate(report))}</td>
                                     <td>
                                         ${report.attachments?.length
                                             ? report.attachments.map(att => `<a href="${att.url}" class="text-link" target="_blank">${att.name}</a>`).join('<br>')
@@ -542,6 +548,60 @@
                     </table>
                 </div>
             `;
+        }
+
+        function getEndDate(report) {
+            if (report.end_date) {
+                return report.end_date;
+            }
+            if (!report.start_date) {
+                return '';
+            }
+
+            const start = new Date(report.start_date);
+            if (Number.isNaN(start.getTime())) {
+                return '';
+            }
+
+            const end = new Date(start);
+            const days = parseInt(report.duration_days || '0', 10);
+            const weeks = parseInt(report.duration_weeks || '0', 10);
+            const months = parseInt(report.duration_months || '0', 10);
+            const years = parseInt(report.duration_years || '0', 10);
+
+            if (days) {
+                end.setDate(end.getDate() + days);
+            }
+            if (weeks) {
+                end.setDate(end.getDate() + (weeks * 7));
+            }
+            if (months) {
+                end.setMonth(end.getMonth() + months);
+            }
+            if (years) {
+                end.setFullYear(end.getFullYear() + years);
+            }
+
+            return end.toISOString().split('T')[0];
+        }
+
+        function formatRemaining(endDateStr) {
+            if (!endDateStr) return '-';
+            const endDate = new Date(endDateStr);
+            if (Number.isNaN(endDate.getTime())) return '-';
+
+            const today = new Date();
+            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const diffMs = endDate - startOfToday;
+            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 0) {
+                return `${Math.abs(diffDays)} day(s) overdue`;
+            }
+            if (diffDays === 0) {
+                return 'Due today';
+            }
+            return `${diffDays} day(s) left`;
         }
 
         function formatDate(dateStr) {
