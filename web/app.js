@@ -402,13 +402,31 @@ function populateSignatureDropdowns() {
     const adminSelect = document.getElementById('admin_signature');
     const staffSelect = document.getElementById('staff_signature');
 
+    const sortedSignatures = [...signatures].sort((a, b) =>
+        (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+    );
+
     const defaultOption = '<option value="">-- Select Signature --</option>';
-    const options = signatures.map(sig =>
+    const options = sortedSignatures.map(sig =>
         `<option value="${sig.userId}" data-url="${sig.signatureUrl || ''}" data-has-signature="${sig.hasSignature}">${sig.name}</option>`
     ).join('');
 
     if (adminSelect) {
         adminSelect.innerHTML = defaultOption + options;
+
+        if (currentUser) {
+            const userEmail = currentUser.email?.toLowerCase();
+            const userMatch = sortedSignatures.find(sig => {
+                const signatureEmail = sig.email?.toLowerCase();
+                const signatureUserId = sig.userId?.toLowerCase();
+                return (userEmail && (signatureEmail === userEmail || signatureUserId === userEmail));
+            });
+
+            if (userMatch) {
+                adminSelect.value = userMatch.userId;
+                updateSignaturePreview('admin');
+            }
+        }
     }
     if (staffSelect) {
         staffSelect.innerHTML = defaultOption + options;
