@@ -1328,13 +1328,24 @@ async function generateJobOrderReport(data) {
     }
   }
 
-  // Handle duration highlighting - ONLY highlight selected cells
+  // Handle duration highlighting for row 9
+  // Template has all cells yellow by default, so we must:
+  // - Apply YELLOW to selected cells
+  // - Apply LIGHT BLUE to non-selected cells (to override template yellow)
   // Cell mapping:
   // Days:   A9=1, B9=2, C9=3, D9=4, E9=5
   // Weeks:  F9=1, G9=2, H9=3, I9=4
   // Months: J9=2, K9=4, L9=6, M9=8, N9=10, O9=12
   // Years:  P9=1, Q9=2, R9=3, S9=4, T9=5
   const durationFields = ['duration_days', 'duration_weeks', 'duration_months', 'duration_years'];
+
+  // Light blue fill for non-selected cells (overrides template yellow)
+  const lightBlueFill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFBDD7EE' },
+    bgColor: { argb: 'FFBDD7EE' }
+  };
 
   // Yellow fill for selected cells
   const yellowFill = {
@@ -1344,7 +1355,8 @@ async function generateJobOrderReport(data) {
     bgColor: { argb: 'FFFFFF00' }
   };
 
-  // Only highlight the cells that user selected
+  // Collect which cells should be highlighted yellow
+  const cellsToHighlight = new Set();
   for (const field of durationFields) {
     const value = data[field];
     if (value) {
@@ -1352,9 +1364,19 @@ async function generateJobOrderReport(data) {
       const categoryMap = DURATION_MAPPING[category] || {};
       const cellAddr = categoryMap[value];
       if (cellAddr) {
-        const cell = ws.getCell(cellAddr);
-        cell.fill = yellowFill;
+        cellsToHighlight.add(cellAddr);
       }
+    }
+  }
+
+  // Apply fills to ALL cells from A9 to T9
+  const allDurationCells = ['A9', 'B9', 'C9', 'D9', 'E9', 'F9', 'G9', 'H9', 'I9', 'J9', 'K9', 'L9', 'M9', 'N9', 'O9', 'P9', 'Q9', 'R9', 'S9', 'T9'];
+  for (const cellAddr of allDurationCells) {
+    const cell = ws.getCell(cellAddr);
+    if (cellsToHighlight.has(cellAddr)) {
+      cell.fill = yellowFill;
+    } else {
+      cell.fill = lightBlueFill;
     }
   }
 
