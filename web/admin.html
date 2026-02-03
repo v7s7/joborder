@@ -408,14 +408,25 @@
         }
 
         function getSelectedDirectoryPath(file) {
+            if (!file) {
+                return '';
+            }
             if (file.path) {
+                if (file.webkitRelativePath) {
+                    const normalizedPath = file.path.replace(/\\/g, '/');
+                    if (normalizedPath.endsWith(file.webkitRelativePath)) {
+                        const basePath = normalizedPath.slice(0, -file.webkitRelativePath.length);
+                        return basePath.replace(/\/$/, '');
+                    }
+                }
                 const lastSeparator = Math.max(file.path.lastIndexOf('/'), file.path.lastIndexOf('\\'));
                 return lastSeparator >= 0 ? file.path.slice(0, lastSeparator) : file.path;
             }
             if (file.webkitRelativePath) {
-                return file.webkitRelativePath.split('/')[0];
+                const segments = file.webkitRelativePath.split('/');
+                return segments.length > 1 ? segments[0] : file.webkitRelativePath;
             }
-            return '';
+            return file.name || '';
         }
 
         // =============================================================================
