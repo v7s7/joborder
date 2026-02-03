@@ -202,6 +202,7 @@
                 <div class="card mb-6">
                     <div class="card-header">
                         <div class="card-title">Filters</div>
+                        <button class="btn btn-ghost btn-sm" id="resetFilters">Reset</button>
                     </div>
                     <div class="card-body">
                         <div class="grid grid-cols-4 gap-4" style="grid-template-columns: repeat(4, 1fr);">
@@ -231,6 +232,9 @@
                                 </label>
                             </div>
                         </div>
+                        <div class="text-secondary text-sm mt-3">
+                            Tip: Use Status + Overdue Only for quick evaluation checks.
+                        </div>
                     </div>
                 </div>
 
@@ -257,6 +261,11 @@
                             <div class="card-title" id="staffDetailTitle">Select a staff member</div>
                         </div>
                         <div class="card-body">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="tag tag-success">On-time</span>
+                                <span class="tag tag-warning">Due today</span>
+                                <span class="tag tag-danger">Overdue</span>
+                            </div>
                             <div id="staffDetail">
                                 <div class="empty-state">
                                     <div class="empty-state-icon"></div>
@@ -373,6 +382,7 @@
             document.getElementById('filterDateTo').addEventListener('change', () => renderStaffTasks(applyFilters()));
             document.getElementById('filterStatus').addEventListener('change', () => renderStaffTasks(applyFilters()));
             document.getElementById('filterOverdue').addEventListener('change', () => renderStaffTasks(applyFilters()));
+            document.getElementById('resetFilters').addEventListener('click', resetFilters);
         });
 
         async function checkAuth() {
@@ -726,6 +736,14 @@
             }
 
             return filtered;
+        }
+
+        function resetFilters() {
+            document.getElementById('filterDateFrom').value = '';
+            document.getElementById('filterDateTo').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterOverdue').checked = false;
+            renderStaffTasks(applyFilters());
         }
 
         function getTimingStatus(report) {
