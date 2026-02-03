@@ -1425,9 +1425,6 @@ async function generateJobOrderReport(data, attachments = []) {
   // Months: J9=2, K9=4, L9=6, M9=8, N9=10, O9=12
   // Years:  P9=1, Q9=2, R9=3, S9=4, T9=5
   const durationFields = ['duration_days', 'duration_weeks', 'duration_months', 'duration_years'];
-
-  // Light blue fill for non-selected cells (overrides template yellow)
-
   // Yellow fill for selected cells
   const yellowFill = {
     type: 'pattern',
@@ -1435,6 +1432,12 @@ async function generateJobOrderReport(data, attachments = []) {
     fgColor: { argb: 'FFFFFF00' },
     bgColor: { argb: 'FFFFFF00' }
   };
+  // Explicit no-fill style for unselected cells
+  const clearFill = {
+    type: 'pattern',
+    pattern: 'none'
+  };
+
   // Explicit no-fill style for unselected cells
   const clearFill = {
     type: 'pattern',
@@ -1454,7 +1457,6 @@ async function generateJobOrderReport(data, attachments = []) {
       }
     }
   }
-
   // Apply fills to ALL cells from A9 to T9
   const allDurationCells = ['A9', 'B9', 'C9', 'D9', 'E9', 'F9', 'G9', 'H9', 'I9', 'J9', 'K9', 'L9', 'M9', 'N9', 'O9', 'P9', 'Q9', 'R9', 'S9', 'T9'];
   for (const cellAddr of allDurationCells) {
@@ -1489,7 +1491,7 @@ async function generateJobOrderReport(data, attachments = []) {
   ];
   const typeCell = ws.getCell('M3');
   typeCell.value = buildCheckboxRichText(typeOptions, typeValue);
-  typeCell.alignment = { ...(typeCell.alignment || {}), wrapText: true, vertical: 'top' };
+  typeCell.alignment = { ...(typeCell.alignment || {}), wrapText: true, vertical: 'middle' };
 
   // Fill department selections with text checkboxes
   const departmentValue = (data.department || '').toLowerCase();
