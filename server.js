@@ -1391,7 +1391,7 @@ async function generateJobOrderReport(data) {
   ];
   const typeCell = ws.getCell('M3');
   typeCell.value = buildCheckboxRichText(typeOptions, typeValue);
-  typeCell.alignment = { ...(typeCell.alignment || {}), wrapText: true, vertical: 'top' };
+  typeCell.alignment = { ...(typeCell.alignment || {}), wrapText: true, vertical: 'middle' };
 
   // Fill department selections with text checkboxes
   const departmentValue = (data.department || '').toLowerCase();
