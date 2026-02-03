@@ -791,8 +791,10 @@ body {
     box-shadow: 0 0 0 3px var(--primary-50);
 }
 
-.form-input::placeholder {
-    color: var(--text-muted);
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: var(--gray-500);
+    opacity: 1;
 }
 
 .form-input.error {
@@ -1230,6 +1232,84 @@ body {
     justify-content: flex-end;
     gap: var(--space-3);
     background: var(--bg-tertiary);
+}
+
+/* =============================================================================
+   LOGIN MODAL STYLES
+   ============================================================================= */
+#loginModal .modal {
+    max-width: 400px;
+}
+
+#loginModal .modal-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-bottom: none;
+    padding: var(--space-6);
+}
+
+#loginModal .modal-title {
+    color: var(--text-inverse);
+    font-size: var(--font-size-xl);
+    text-align: center;
+    width: 100%;
+}
+
+#loginModal .modal-body {
+    padding: var(--space-6) var(--space-6) var(--space-8);
+}
+
+#loginModal .modal-body > p {
+    text-align: center;
+    margin-bottom: var(--space-6);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+#loginModal .form-group {
+    margin-bottom: var(--space-5);
+}
+
+#loginModal .form-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+}
+
+#loginModal .form-input {
+    padding: var(--space-4);
+    font-size: var(--font-size-base);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    background: var(--bg-secondary);
+    transition: all var(--transition-fast);
+}
+
+#loginModal .form-input:hover {
+    border-color: var(--border-medium);
+}
+
+#loginModal .form-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--primary-50);
+    background: white;
+}
+
+#loginModal .form-input::placeholder {
+    color: var(--gray-500);
+    font-weight: 400;
+}
+
+#loginModal .btn-primary {
+    padding: var(--space-4) var(--space-6);
+    font-size: var(--font-size-base);
+    border-radius: var(--radius-lg);
+    margin-top: var(--space-4);
+}
+
+#loginModal .alert-error {
+    margin-top: var(--space-4);
+    margin-bottom: 0;
+    border-radius: var(--radius-md);
 }
 
 /* =============================================================================
