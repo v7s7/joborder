@@ -110,6 +110,9 @@ function setupEventListeners() {
     if (staffSigSelect) {
         staffSigSelect.addEventListener('change', () => updateSignaturePreview('staff'));
     }
+
+    // Attachment handlers
+    setupAttachmentHandlers();
 }
 
 // =============================================================================
@@ -436,11 +439,23 @@ async function handleSubmit(e) {
 }
 
 async function generateReport(data) {
+    // Use FormData to support file uploads
+    const formData = new FormData();
+
+    // Add form fields
+    for (const [key, value] of Object.entries(data)) {
+        formData.append(key, value);
+    }
+
+    // Add attachments
+    for (const file of selectedFiles) {
+        formData.append('attachments', file);
+    }
+
     const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(data)
+        body: formData  // No Content-Type header - browser sets it with boundary
     });
 
     // Check if unauthorized
@@ -525,6 +540,9 @@ function resetForm() {
     const staffPreview = document.getElementById('staffSigPreview');
     if (adminPreview) adminPreview.innerHTML = '';
     if (staffPreview) staffPreview.innerHTML = '';
+
+    // Clear attachments
+    clearAttachments();
 }
 
 function clearDuration() {
@@ -534,9 +552,117 @@ function clearDuration() {
     });
 }
 
+// =============================================================================
+// ATTACHMENT HANDLING
+// =============================================================================
+
+let selectedFiles = [];
+
+function setupAttachmentHandlers() {
+    const dropzone = document.getElementById('attachmentDropzone');
+    const fileInput = document.getElementById('attachmentInput');
+    const attachmentList = document.getElementById('attachmentList');
+
+    if (!dropzone || !fileInput) return;
+
+    // Click to browse
+    dropzone.addEventListener('click', () => fileInput.click());
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        addFiles(e.target.files);
+        fileInput.value = ''; // Reset to allow re-selecting same file
+    });
+
+    // Drag and drop events
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        addFiles(e.dataTransfer.files);
+    });
+}
+
+function addFiles(fileList) {
+    for (const file of fileList) {
+        // Check for duplicates
+        if (selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+            continue;
+        }
+        selectedFiles.push(file);
+    }
+    renderAttachmentList();
+}
+
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    renderAttachmentList();
+}
+
+function renderAttachmentList() {
+    const list = document.getElementById('attachmentList');
+    if (!list) return;
+
+    if (selectedFiles.length === 0) {
+        list.innerHTML = '';
+        return;
+    }
+
+    list.innerHTML = selectedFiles.map((file, index) => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        let iconClass = '';
+        let iconText = ext.toUpperCase();
+
+        if (['pdf'].includes(ext)) iconClass = 'pdf';
+        else if (['doc', 'docx'].includes(ext)) iconClass = 'doc';
+        else if (['xls', 'xlsx'].includes(ext)) iconClass = 'xls';
+        else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext)) {
+            iconClass = 'img';
+            iconText = 'IMG';
+        }
+
+        return `
+            <div class="attachment-item">
+                <div class="file-icon ${iconClass}">${iconText}</div>
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-size">${formatFileSize(file.size)}</div>
+                </div>
+                <button type="button" class="remove-btn" onclick="removeFile(${index})">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function clearAttachments() {
+    selectedFiles = [];
+    renderAttachmentList();
+}
+
 // Make functions available globally for onclick
 window.clearDuration = clearDuration;
 window.resetForm = resetForm;
+window.removeFile = removeFile;
 
 // =============================================================================
 // ADMIN FUNCTIONS
