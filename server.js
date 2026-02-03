@@ -891,11 +891,13 @@ function getJobOrderMetadata(itemName) {
     const excelFile = `Job_${jobNo}.xlsx`;
     const excelPath = path.join(itemPath, excelFile);
 
-    // Count attachments (all files except the Excel report)
+    // Count attachments from the attachments subfolder
     let attachmentCount = 0;
     try {
-      const folderContents = fs.readdirSync(itemPath);
-      attachmentCount = folderContents.filter(f => f !== excelFile).length;
+      const attachmentsPath = path.join(itemPath, 'attachments');
+      if (fs.existsSync(attachmentsPath)) {
+        attachmentCount = fs.readdirSync(attachmentsPath).length;
+      }
     } catch (e) {}
 
     return {
@@ -1551,13 +1553,19 @@ async function generateJobOrderReport(data, attachments = []) {
   const excelPath = path.join(folderPath, excelFileName);
   await workbook.xlsx.writeFile(excelPath);
 
-  // Move attachments to the folder
+  // Move attachments to a subfolder
   if (attachments && attachments.length > 0) {
+    // Create attachments subfolder
+    const attachmentsFolder = path.join(folderPath, 'attachments');
+    if (!fs.existsSync(attachmentsFolder)) {
+      fs.mkdirSync(attachmentsFolder, { recursive: true });
+    }
+
     for (const file of attachments) {
       try {
         // Get original filename without uuid prefix
         const originalName = file.originalname;
-        const destPath = path.join(folderPath, originalName);
+        const destPath = path.join(attachmentsFolder, originalName);
 
         // Handle duplicate filenames
         let finalPath = destPath;
@@ -1565,7 +1573,7 @@ async function generateJobOrderReport(data, attachments = []) {
         while (fs.existsSync(finalPath)) {
           const ext = path.extname(originalName);
           const base = path.basename(originalName, ext);
-          finalPath = path.join(folderPath, `${base}_${counter}${ext}`);
+          finalPath = path.join(attachmentsFolder, `${base}_${counter}${ext}`);
           counter++;
         }
 
@@ -1579,7 +1587,7 @@ async function generateJobOrderReport(data, attachments = []) {
     }
   }
 
-  return { jobNo, folderPath, excelPath };
+  return { jobNo, folderName, folderPath, excelFileName, excelPath };
 }
 
 app.get('/api/get-job-no', (req, res) => {
@@ -1591,12 +1599,18 @@ app.post('/api/generate', leaderGuard, uploadAttachments.array('attachments', 20
   try {
     const data = req.body;
     const attachments = req.files || [];
-    const { jobNo, folderPath, excelPath } = await generateJobOrderReport(data, attachments);
+    const { jobNo, folderName, folderPath, excelFileName, excelPath } = await generateJobOrderReport(data, attachments);
+
+    // Build download URL for the client
+    const downloadUrl = `/Generated_Reports/${folderName}/${excelFileName}`;
 
     res.json({
       success: true,
       file: excelPath,
       folder: folderPath,
+      folderName: folderName,
+      fileName: excelFileName,
+      downloadUrl: downloadUrl,
       job_no: jobNo,
       attachmentCount: attachments.length,
       message: `Job order ${jobNo} generated successfully`

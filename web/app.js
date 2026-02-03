@@ -467,11 +467,27 @@ async function generateReport(data) {
     const result = await response.json();
 
     if (result.success) {
-        showSuccessModal(result.job_no);
+        showSuccessModal(result.job_no, result.downloadUrl);
         showToast(`Job order ${result.job_no} created successfully!`, 'success');
+
+        // Auto-download the report
+        if (result.downloadUrl) {
+            triggerDownload(result.downloadUrl, result.fileName || `Job_${result.job_no}.xlsx`);
+        }
     } else {
         showToast(result.error || 'Failed to generate report', 'error');
     }
+}
+
+// Trigger file download
+function triggerDownload(url, filename) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 async function requestSignatureApproval(reportData, staffUserId) {
@@ -515,11 +531,21 @@ function showApprovalRequestedModal() {
     }
 }
 
-function showSuccessModal(jobNumber) {
+function showSuccessModal(jobNumber, downloadUrl) {
     if (successModal) {
         const successMessage = document.getElementById('successMessage');
         if (successMessage) {
-            successMessage.textContent = `Job Order #${jobNumber} has been generated successfully.`;
+            if (downloadUrl) {
+                successMessage.innerHTML = `
+                    Job Order <strong>#${jobNumber}</strong> has been generated successfully.<br><br>
+                    <small>Your download should start automatically.</small><br>
+                    <a href="${downloadUrl}" download class="btn btn-primary btn-sm" style="margin-top: 10px;">
+                        Download Again
+                    </a>
+                `;
+            } else {
+                successMessage.textContent = `Job Order #${jobNumber} has been generated successfully.`;
+            }
         }
         successModal.classList.add('active');
     }
