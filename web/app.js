@@ -491,14 +491,22 @@ function triggerDownload(url, filename) {
 }
 
 async function requestSignatureApproval(reportData, staffUserId) {
+    // Use FormData to support file uploads (same as generateReport)
+    const formData = new FormData();
+
+    // Add report data as JSON string
+    formData.append('reportData', JSON.stringify(reportData));
+    formData.append('staffUserId', staffUserId);
+
+    // Add attachments
+    for (const file of selectedFiles) {
+        formData.append('attachments', file);
+    }
+
     const response = await fetch('/api/approvals/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-            staffUserId: staffUserId,
-            reportData: reportData
-        })
+        body: formData  // No Content-Type header - browser sets it with boundary
     });
 
     if (response.status === 401) {
