@@ -148,46 +148,88 @@
                         <button class="btn btn-secondary btn-sm" id="exportStaffReport" disabled>Export Staff Report</button>
                     </div>
                     <div class="card-body">
-                        <div class="stats-grid" style="grid-template-columns: repeat(5, 1fr);">
-                            <div class="stat-card" style="--stat-color: var(--primary);">
-                                <div class="stat-card-icon primary"></div>
-                                <div class="stat-card-content">
-                                    <div class="stat-card-title">Total Tasks</div>
-                                    <div class="stat-card-value" id="summaryTotal">0</div>
+                        <div class="stats-grid" style="grid-template-columns: repeat(6, 1fr);">
+                                <div class="stat-card" style="--stat-color: var(--primary);">
+                                    <div class="stat-card-icon primary"></div>
+                                    <div class="stat-card-content">
+                                        <div class="stat-card-title">Total Tasks</div>
+                                        <div class="stat-card-value" id="summaryTotal">0</div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="stat-card" style="--stat-color: var(--success);">
-                                <div class="stat-card-icon success"></div>
-                                <div class="stat-card-content">
-                                    <div class="stat-card-title">Completed</div>
-                                    <div class="stat-card-value" id="summaryCompleted">0</div>
+                                <div class="stat-card" style="--stat-color: var(--success);">
+                                    <div class="stat-card-icon success"></div>
+                                    <div class="stat-card-content">
+                                        <div class="stat-card-title">Completed</div>
+                                        <div class="stat-card-value" id="summaryCompleted">0</div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="stat-card" style="--stat-color: var(--warning);">
-                                <div class="stat-card-icon warning"></div>
-                                <div class="stat-card-content">
-                                    <div class="stat-card-title">Overdue</div>
-                                    <div class="stat-card-value" id="summaryOverdue">0</div>
+                                <div class="stat-card" style="--stat-color: var(--warning);">
+                                    <div class="stat-card-icon warning"></div>
+                                    <div class="stat-card-content">
+                                        <div class="stat-card-title">Overdue</div>
+                                        <div class="stat-card-value" id="summaryOverdue">0</div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="stat-card" style="--stat-color: var(--info);">
-                                <div class="stat-card-icon info"></div>
-                                <div class="stat-card-content">
-                                    <div class="stat-card-title">On-Time %</div>
-                                    <div class="stat-card-value" id="summaryOnTime">0%</div>
+                                <div class="stat-card" style="--stat-color: var(--info);">
+                                    <div class="stat-card-icon info"></div>
+                                    <div class="stat-card-content">
+                                        <div class="stat-card-title">On-Time %</div>
+                                        <div class="stat-card-value" id="summaryOnTime">0%</div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="stat-card" style="--stat-color: var(--secondary);">
-                                <div class="stat-card-icon"></div>
-                                <div class="stat-card-content">
-                                    <div class="stat-card-title">Avg Delay</div>
-                                    <div class="stat-card-value" id="summaryDelay">0 days</div>
+                                <div class="stat-card" style="--stat-color: var(--secondary);">
+                                    <div class="stat-card-icon"></div>
+                                    <div class="stat-card-content">
+                                        <div class="stat-card-title">Avg Delay</div>
+                                        <div class="stat-card-value" id="summaryDelay">0 days</div>
+                                    </div>
                                 </div>
-                            </div>
+                                <div class="stat-card" style="--stat-color: var(--primary);">
+                                    <div class="stat-card-icon primary"></div>
+                                    <div class="stat-card-content">
+                                        <div class="stat-card-title">Avg Completion</div>
+                                        <div class="stat-card-value" id="summaryCompletion">0%</div>
+                                    </div>
+                                </div>
                         </div>
                         <div class="mt-4">
                             <div class="text-secondary text-sm mb-2">Task Load by Month</div>
                             <canvas id="taskLoadChart" height="120"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-6">
+                    <div class="card-header">
+                        <div class="card-title">Filters</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="grid grid-cols-4 gap-4" style="grid-template-columns: repeat(4, 1fr);">
+                            <div class="form-group mb-0">
+                                <label class="form-label">Date From</label>
+                                <input type="date" class="form-input" id="filterDateFrom">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label">Date To</label>
+                                <input type="date" class="form-input" id="filterDateTo">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="filterStatus">
+                                    <option value="">All Statuses</option>
+                                    <option value="Not Started">Not Started</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Blocked">Blocked</option>
+                                    <option value="Completed">Completed</option>
+                                </select>
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label">Overdue Only</label>
+                                <label class="switch" style="margin-top: 8px;">
+                                    <input type="checkbox" id="filterOverdue">
+                                    <span class="switch-slider"></span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -292,6 +334,7 @@
         let selectedStaffId = null;
         let staffSummary = null;
         let chartContext = null;
+        let selectedReports = [];
 
         const loginModal = document.getElementById('loginModal');
         const loginForm = document.getElementById('loginForm');
@@ -326,6 +369,10 @@
             if (exportStaffReportBtn) {
                 exportStaffReportBtn.addEventListener('click', exportStaffReport);
             }
+            document.getElementById('filterDateFrom').addEventListener('change', () => renderStaffTasks(applyFilters()));
+            document.getElementById('filterDateTo').addEventListener('change', () => renderStaffTasks(applyFilters()));
+            document.getElementById('filterStatus').addEventListener('change', () => renderStaffTasks(applyFilters()));
+            document.getElementById('filterOverdue').addEventListener('change', () => renderStaffTasks(applyFilters()));
         });
 
         async function checkAuth() {
@@ -537,7 +584,8 @@
             try {
                 const response = await fetch(`/api/staff/reports/${userId}`, { credentials: 'include' });
                 const data = await response.json();
-                renderStaffTasks(data.reports || []);
+                selectedReports = data.reports || [];
+                renderStaffTasks(applyFilters());
                 await loadStaffSummary(userId);
                 if (exportStaffReportBtn) {
                     exportStaffReportBtn.disabled = false;
@@ -550,7 +598,7 @@
                         <div class="empty-state-description">Please refresh and try again.</div>
                     </div>
                 `;
-                updateSummaryCards({ totalTasks: 0, completedTasks: 0, overdueTasks: 0, onTimePercent: 0, averageDelay: 0 });
+                updateSummaryCards({ totalTasks: 0, completedTasks: 0, overdueTasks: 0, onTimePercent: 0, averageDelay: 0, averageCompletion: 0 });
                 renderTaskLoadChart({});
             }
         }
@@ -573,12 +621,14 @@
             const overdueEl = document.getElementById('summaryOverdue');
             const onTimeEl = document.getElementById('summaryOnTime');
             const delayEl = document.getElementById('summaryDelay');
+            const completionEl = document.getElementById('summaryCompletion');
 
             if (totalEl) totalEl.textContent = summary.totalTasks || 0;
             if (completedEl) completedEl.textContent = summary.completedTasks || 0;
             if (overdueEl) overdueEl.textContent = summary.overdueTasks || 0;
             if (onTimeEl) onTimeEl.textContent = `${summary.onTimePercent || 0}%`;
             if (delayEl) delayEl.textContent = `${summary.averageDelay || 0} days`;
+            if (completionEl) completionEl.textContent = `${summary.averageCompletion || 0}%`;
         }
 
         function renderTaskLoadChart(loadByMonth) {
@@ -648,6 +698,96 @@
             }
         }
 
+        function applyFilters() {
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+            const status = document.getElementById('filterStatus').value;
+            const overdueOnly = document.getElementById('filterOverdue').checked;
+
+            let filtered = [...selectedReports];
+
+            if (dateFrom) {
+                filtered = filtered.filter(report => {
+                    const dateStr = report.main_date || report.createdAt;
+                    return dateStr && new Date(dateStr) >= new Date(dateFrom);
+                });
+            }
+            if (dateTo) {
+                filtered = filtered.filter(report => {
+                    const dateStr = report.main_date || report.createdAt;
+                    return dateStr && new Date(dateStr) <= new Date(dateTo);
+                });
+            }
+            if (status) {
+                filtered = filtered.filter(report => (report.status || '') === status);
+            }
+            if (overdueOnly) {
+                filtered = filtered.filter(report => getTimingStatus(report) === 'overdue');
+            }
+
+            return filtered;
+        }
+
+        function getTimingStatus(report) {
+            const endDateStr = getEndDate(report);
+            if (!endDateStr) return 'unknown';
+            const endDate = new Date(endDateStr);
+            if (Number.isNaN(endDate.getTime())) return 'unknown';
+
+            const today = new Date();
+            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            if (endDate < startOfToday && !report.completed_at) return 'overdue';
+            if (endDate.getTime() === startOfToday.getTime()) return 'due';
+            return 'on-time';
+        }
+
+        async function updateStatus(jobNo) {
+            if (!selectedStaffId) return;
+            const select = document.querySelector(`.staff-status[data-job="${jobNo}"]`);
+            const status = select ? select.value : '';
+            try {
+                const response = await fetch(`/api/staff/reports/${selectedStaffId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ jobNo, status })
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    showToast(data.error || 'Failed to update status', 'error');
+                } else {
+                    showToast('Status updated!', 'success');
+                    await selectStaff(selectedStaffId);
+                }
+            } catch (error) {
+                showToast('Failed to update status', 'error');
+            }
+        }
+
+        async function updateProgress(jobNo) {
+            if (!selectedStaffId) return;
+            const input = document.querySelector(`.staff-progress[data-job="${jobNo}"]`);
+            const percent = input ? input.value : 0;
+            try {
+                const response = await fetch(`/api/staff/reports/${selectedStaffId}/progress`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ jobNo, completionPercent: percent })
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    showToast(data.error || 'Failed to update progress', 'error');
+                } else {
+                    const label = document.querySelector(`.progress-value[data-job="${jobNo}"]`);
+                    if (label) label.textContent = `${percent}%`;
+                    await selectStaff(selectedStaffId);
+                }
+            } catch (error) {
+                showToast('Failed to update progress', 'error');
+            }
+        }
+
         async function saveNotes(jobNo) {
             if (!selectedStaffId) return;
             const notesField = document.querySelector(`.staff-notes[data-job="${jobNo}"]`);
@@ -699,6 +839,7 @@
                                 <th>Type</th>
                                 <th>Objective</th>
                                 <th>Status</th>
+                                <th>Completion</th>
                                 <th>Start</th>
                                 <th>End</th>
                                 <th>Remaining</th>
@@ -715,10 +856,27 @@
                                     <td>${report.department || '-'}</td>
                                     <td>${report.work_type || '-'}</td>
                                     <td>${report.objective || report.description || '-'}</td>
-                                    <td>${report.completed_at ? 'Completed' : 'In Progress'}</td>
+                                    <td>
+                                        <select class="form-select staff-status" data-job="${report.jobNo}" onchange="updateStatus('${report.jobNo}')">
+                                            ${['Not Started', 'In Progress', 'Blocked', 'Completed'].map(option => `
+                                                <option value="${option}" ${option === (report.status || 'Not Started') ? 'selected' : ''}>${option}</option>
+                                            `).join('')}
+                                        </select>
+                                        ${report.completed_at
+                                            ? `<div class="text-secondary text-xs mt-1">Completed ${formatDate(report.completed_at)}</div>`
+                                            : ''}
+                                    </td>
+                                    <td>
+                                        <div class="progress-row">
+                                            <input type="range" min="0" max="100" class="staff-progress" data-job="${report.jobNo}" value="${report.completion_percent || 0}" oninput="updateProgress('${report.jobNo}')">
+                                            <span class="progress-value" data-job="${report.jobNo}">${report.completion_percent || 0}%</span>
+                                        </div>
+                                    </td>
                                     <td>${formatDate(report.start_date)}</td>
                                     <td>${formatDate(getEndDate(report))}</td>
-                                    <td>${formatRemaining(getEndDate(report))}</td>
+                                    <td>
+                                        <span class="tag ${getTimingTag(report)}">${formatRemaining(getEndDate(report))}</span>
+                                    </td>
                                     <td>
                                         ${report.attachments?.length
                                             ? report.attachments.map(att => `<a href="${att.url}" class="text-link" target="_blank">${att.name}</a>`).join('<br>')
@@ -731,7 +889,7 @@
                                     <td class="text-center">
                                         <a href="${report.downloadUrl}" class="btn btn-ghost btn-sm">Download</a>
                                         ${report.completed_at
-                                            ? `<div class="text-secondary text-xs mt-2">Completed ${formatDate(report.completed_at)}</div>`
+                                            ? ''
                                             : `<button class="btn btn-success btn-sm mt-2" onclick="markComplete('${report.jobNo}')">Mark Complete</button>`}
                                     </td>
                                 </tr>
@@ -794,6 +952,14 @@
                 return 'Due today';
             }
             return `${diffDays} day(s) left`;
+        }
+
+        function getTimingTag(report) {
+            const status = getTimingStatus(report);
+            if (status === 'overdue') return 'tag-danger';
+            if (status === 'due') return 'tag-warning';
+            if (status === 'on-time') return 'tag-success';
+            return 'tag-neutral';
         }
 
         function formatDate(dateStr) {

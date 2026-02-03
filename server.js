@@ -1054,7 +1054,9 @@ function addReportEntry({ jobNo, folderName, fileName, reportData, staffInfo, cr
     created_by: createdBy?.email || createdBy?.username || '',
     completed_at: null,
     completed_by: null,
-    review_notes: ''
+    review_notes: '',
+    status: 'Not Started',
+    completion_percent: 0
   };
 
   db.reports.push(entry);
@@ -1264,11 +1266,13 @@ app.get('/api/staff/reports/:userId/summary', leaderGuard, (req, res) => {
   let onTimeCount = 0;
   let delayedTotal = 0;
   let delayedItems = 0;
+  let completionTotal = 0;
 
   reports.forEach(report => {
     if (report.completed_at) {
       completedCount += 1;
     }
+    completionTotal += Number(report.completion_percent || 0);
 
     const endDateStr = computeEndDate(report);
     const endDate = endDateStr ? new Date(endDateStr) : null;
@@ -1290,6 +1294,7 @@ app.get('/api/staff/reports/:userId/summary', leaderGuard, (req, res) => {
 
   const onTimePercent = completedCount ? Math.round((onTimeCount / completedCount) * 100) : 0;
   const averageDelay = delayedItems ? Math.round((delayedTotal / delayedItems) * 10) / 10 : 0;
+  const averageCompletion = reports.length ? Math.round((completionTotal / reports.length) * 10) / 10 : 0;
 
   const loadByMonth = {};
   reports.forEach(report => {
@@ -1306,6 +1311,7 @@ app.get('/api/staff/reports/:userId/summary', leaderGuard, (req, res) => {
     overdueTasks: overdueCount,
     onTimePercent,
     averageDelay,
+    averageCompletion,
     loadByMonth
   });
 });
@@ -1324,8 +1330,70 @@ app.post('/api/staff/reports/:userId/complete', leaderGuard, (req, res) => {
 
   report.completed_at = new Date().toISOString();
   report.completed_by = req.session.user?.email || req.session.user?.username || '';
+  report.status = 'Completed';
+  report.completion_percent = 100;
   saveDatabase(db);
 
+  res.json({ success: true, report });
+});
+
+app.post('/api/staff/reports/:userId/status', leaderGuard, (req, res) => {
+  const userId = req.params.userId.toLowerCase();
+  const { jobNo, status } = req.body || {};
+  if (!jobNo) {
+    return res.status(400).json({ error: 'Job number is required' });
+  }
+  const allowedStatuses = ['Not Started', 'In Progress', 'Blocked', 'Completed'];
+  if (!allowedStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  const report = db.reports.find(item => item.staff_signature === userId && `${item.jobNo}` === `${jobNo}`);
+  if (!report) {
+    return res.status(404).json({ error: 'Report not found' });
+  }
+
+  report.status = status;
+  if (status === 'Completed') {
+    report.completed_at = report.completed_at || new Date().toISOString();
+    report.completed_by = report.completed_by || req.session.user?.email || req.session.user?.username || '';
+    report.completion_percent = 100;
+  } else {
+    report.completed_at = null;
+    report.completed_by = null;
+    if (report.completion_percent === 100) {
+      report.completion_percent = 0;
+    }
+  }
+  saveDatabase(db);
+
+  res.json({ success: true, report });
+});
+
+app.post('/api/staff/reports/:userId/progress', leaderGuard, (req, res) => {
+  const userId = req.params.userId.toLowerCase();
+  const { jobNo, completionPercent } = req.body || {};
+  if (!jobNo) {
+    return res.status(400).json({ error: 'Job number is required' });
+  }
+
+  const percent = Math.max(0, Math.min(100, Number(completionPercent || 0)));
+  const report = db.reports.find(item => item.staff_signature === userId && `${item.jobNo}` === `${jobNo}`);
+  if (!report) {
+    return res.status(404).json({ error: 'Report not found' });
+  }
+
+  report.completion_percent = percent;
+  if (percent >= 100) {
+    report.status = 'Completed';
+    report.completed_at = report.completed_at || new Date().toISOString();
+    report.completed_by = report.completed_by || req.session.user?.email || req.session.user?.username || '';
+  } else if (report.status === 'Completed') {
+    report.status = 'In Progress';
+    report.completed_at = null;
+    report.completed_by = null;
+  }
+  saveDatabase(db);
   res.json({ success: true, report });
 });
 
@@ -1358,6 +1426,8 @@ app.get('/api/staff/reports/:userId/export', leaderGuard, (req, res) => {
     'Objective',
     'Start Date',
     'End Date',
+    'Status',
+    'Completion %',
     'Completed At',
     'Completed By',
     'Review Notes'
@@ -1371,6 +1441,8 @@ app.get('/api/staff/reports/:userId/export', leaderGuard, (req, res) => {
     report.objective || report.description || '',
     report.start_date || '',
     report.end_date || '',
+    report.status || '',
+    report.completion_percent || 0,
     report.completed_at || '',
     report.completed_by || '',
     (report.review_notes || '').replace(/"/g, '""')
