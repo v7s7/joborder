@@ -412,7 +412,11 @@
                 <form id="settingsForm">
                     <div class="form-group">
                         <label class="form-label">Save Reports To</label>
-                        <input type="text" class="form-input" id="savePathInput" placeholder="e.g., \\\\server\\share\\Reports or C:\\Reports">
+                        <div class="flex gap-2">
+                            <input type="text" class="form-input" id="savePathInput" placeholder="e.g., \\\\server\\share\\Reports or C:\\Reports">
+                            <button type="button" class="btn btn-secondary" id="browseSavePathBtn">Browse</button>
+                        </div>
+                        <input type="file" id="savePathPicker" webkitdirectory directory style="display: none;">
                         <small class="text-secondary" style="display: block; margin-top: 8px;">
                             Enter a network path or local folder where generated reports will be saved.
                             Leave empty to use the default server location.

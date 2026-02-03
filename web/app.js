@@ -139,6 +139,7 @@ function setupEventListeners() {
     if (settingsForm) {
         settingsForm.addEventListener('submit', handleSaveSettings);
     }
+    setupSavePathPicker();
 
     // Attachment handlers
     setupAttachmentHandlers();
@@ -356,6 +357,57 @@ async function handleSaveSettings(e) {
         console.error('Failed to save settings:', error);
         showToast('Failed to save settings', 'error');
     }
+}
+
+function setupSavePathPicker() {
+    const browseBtn = document.getElementById('browseSavePathBtn');
+    const savePathInput = document.getElementById('savePathInput');
+    const savePathPicker = document.getElementById('savePathPicker');
+
+    if (!browseBtn || !savePathInput) return;
+
+    browseBtn.addEventListener('click', async () => {
+        if (window.showDirectoryPicker) {
+            try {
+                const handle = await window.showDirectoryPicker();
+                if (handle?.name) {
+                    savePathInput.value = handle.name;
+                }
+                return;
+            } catch (error) {
+                if (error?.name !== 'AbortError') {
+                    console.error('Failed to open directory picker:', error);
+                }
+            }
+        }
+
+        if (savePathPicker) {
+            savePathPicker.click();
+        }
+    });
+
+    if (savePathPicker) {
+        savePathPicker.addEventListener('change', () => {
+            const file = savePathPicker.files?.[0];
+            if (!file) return;
+            const path = getSelectedDirectoryPath(file);
+            if (path) {
+                savePathInput.value = path;
+            }
+            savePathPicker.value = '';
+        });
+    }
+}
+
+function getSelectedDirectoryPath(file) {
+    if (file.path) {
+        const lastSeparator = Math.max(file.path.lastIndexOf('/'), file.path.lastIndexOf('\\'));
+        return lastSeparator >= 0 ? file.path.slice(0, lastSeparator) : file.path;
+    }
+    if (file.webkitRelativePath) {
+        return file.webkitRelativePath.split('/')[0];
+    }
+    return '';
 }
 
 // =============================================================================
