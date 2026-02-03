@@ -55,6 +55,9 @@
                         <div class="sidebar-user-role" id="sidebarUserRole">Staff</div>
                     </div>
                 </div>
+                <button class="btn btn-ghost btn-full mt-2" id="settingsBtn" style="justify-content: flex-start; gap: 12px;">
+                    Settings
+                </button>
                 <button class="btn btn-ghost btn-full mt-2" id="logoutBtn" style="justify-content: flex-start; gap: 12px;">
                     Logout
                 </button>
@@ -394,6 +397,32 @@
                     <a href="/reports.html" class="btn btn-secondary btn-full">View Reports</a>
                     <button class="btn btn-primary btn-full" id="createAnotherBtn">Create Another</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Settings</h3>
+                <button class="modal-close" id="closeSettingsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="settingsForm">
+                    <div class="form-group">
+                        <label class="form-label">Save Reports To</label>
+                        <input type="text" class="form-input" id="savePathInput" placeholder="e.g., \\\\server\\share\\Reports or C:\\Reports">
+                        <small class="text-secondary" style="display: block; margin-top: 8px;">
+                            Enter a network path or local folder where generated reports will be saved.
+                            Leave empty to use the default server location.
+                        </small>
+                    </div>
+                    <div class="flex gap-4 mt-4">
+                        <button type="button" class="btn btn-secondary btn-full" id="cancelSettingsBtn">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-full">Save Settings</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

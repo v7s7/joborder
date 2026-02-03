@@ -48,9 +48,10 @@ function loadDatabase() {
   return { users: {}, invitations: {}, signatures: {}, pendingApprovals: {} };
 }
 
-// Ensure pendingApprovals exists in loaded database
+// Ensure all required structures exist in loaded database
 function ensureDbStructure(db) {
   if (!db.pendingApprovals) db.pendingApprovals = {};
+  if (!db.userSettings) db.userSettings = {};
   return db;
 }
 
@@ -587,6 +588,67 @@ app.get('/auth/me', (req, res) => {
     });
   }
   return res.status(401).json({ error: 'Not authenticated' });
+});
+
+// =============================================================================
+// USER SETTINGS API
+// =============================================================================
+
+// Get user settings
+app.get('/api/user/settings', (req, res) => {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const userEmail = req.session.user.email?.toLowerCase();
+  const settings = db.userSettings[userEmail] || {};
+
+  res.json({
+    success: true,
+    settings: {
+      savePath: settings.savePath || '',
+      ...settings
+    }
+  });
+});
+
+// Update user settings
+app.post('/api/user/settings', (req, res) => {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const userEmail = req.session.user.email?.toLowerCase();
+  const { savePath } = req.body;
+
+  // Validate the save path if provided
+  if (savePath && savePath.trim()) {
+    // Basic validation - check if path looks valid
+    const trimmedPath = savePath.trim();
+
+    // Allow network paths (\\server\share) and local paths
+    if (!trimmedPath.match(/^(\\\\|\/|[A-Za-z]:)/)) {
+      return res.status(400).json({
+        error: 'Invalid path format. Use a full path like \\\\server\\share or C:\\folder'
+      });
+    }
+  }
+
+  // Update settings
+  if (!db.userSettings[userEmail]) {
+    db.userSettings[userEmail] = {};
+  }
+
+  db.userSettings[userEmail].savePath = savePath?.trim() || '';
+  db.userSettings[userEmail].updatedAt = new Date().toISOString();
+
+  saveDatabase(db);
+
+  res.json({
+    success: true,
+    message: 'Settings saved successfully',
+    settings: db.userSettings[userEmail]
+  });
 });
 
 // =============================================================================
@@ -1350,12 +1412,26 @@ app.post('/api/approvals/:token/generate', leaderGuard, async (req, res) => {
 
     const { jobNo, folderName, folderPath, excelFileName, excelPath } = await generateJobOrderReport(reportData, [], existingFolder);
 
-    // Build download URL
-    const downloadUrl = `/Generated_Reports/${folderName}/${excelFileName}`;
+    // Get user's custom save path
+    const userEmail = user.email?.toLowerCase();
+    const userSettings = db.userSettings[userEmail] || {};
+    let savedPath = folderPath;
+
+    // If user has a custom save path, copy the folder there
+    if (userSettings.savePath) {
+      try {
+        const customFolderPath = path.join(userSettings.savePath, folderName);
+        await copyFolderRecursive(folderPath, customFolderPath);
+        savedPath = customFolderPath;
+      } catch (copyErr) {
+        console.error('Failed to copy to custom path:', copyErr);
+        // Continue with default path - don't fail the whole operation
+      }
+    }
 
     approval.generatedAt = new Date().toISOString();
     approval.jobNo = jobNo;
-    approval.downloadUrl = downloadUrl;
+    approval.savedPath = savedPath;
     saveDatabase(db);
 
     res.json({
@@ -1364,7 +1440,7 @@ app.post('/api/approvals/:token/generate', leaderGuard, async (req, res) => {
       folder: folderPath,
       folderName: folderName,
       fileName: excelFileName,
-      downloadUrl: downloadUrl,
+      savedPath: savedPath,
       job_no: jobNo,
       message: `Job order ${jobNo} generated successfully`
     });
@@ -1436,6 +1512,27 @@ function formatDate(dateStr) {
   const parts = dateStr.split('-');
   if (parts.length !== 3) return dateStr;
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+// Helper to copy folder recursively to custom save path
+async function copyFolderRecursive(src, dest) {
+  // Create destination folder
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
+  }
+
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      await copyFolderRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
 }
 
 async function generateJobOrderReport(data, attachments = [], existingFolder = null) {
@@ -1690,8 +1787,22 @@ app.post('/api/generate', leaderGuard, uploadAttachments.array('attachments', 20
     const attachments = req.files || [];
     const { jobNo, folderName, folderPath, excelFileName, excelPath } = await generateJobOrderReport(data, attachments);
 
-    // Build download URL for the client
-    const downloadUrl = `/Generated_Reports/${folderName}/${excelFileName}`;
+    // Get user's custom save path
+    const userEmail = req.session.user?.email?.toLowerCase();
+    const userSettings = db.userSettings[userEmail] || {};
+    let savedPath = folderPath;
+
+    // If user has a custom save path, copy the folder there
+    if (userSettings.savePath) {
+      try {
+        const customFolderPath = path.join(userSettings.savePath, folderName);
+        await copyFolderRecursive(folderPath, customFolderPath);
+        savedPath = customFolderPath;
+      } catch (copyErr) {
+        console.error('Failed to copy to custom path:', copyErr);
+        // Continue with default path - don't fail the whole operation
+      }
+    }
 
     res.json({
       success: true,
@@ -1699,7 +1810,7 @@ app.post('/api/generate', leaderGuard, uploadAttachments.array('attachments', 20
       folder: folderPath,
       folderName: folderName,
       fileName: excelFileName,
-      downloadUrl: downloadUrl,
+      savedPath: savedPath,
       job_no: jobNo,
       attachmentCount: attachments.length,
       message: `Job order ${jobNo} generated successfully`

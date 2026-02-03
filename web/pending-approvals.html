@@ -443,29 +443,14 @@
                     throw new Error(data.error || 'Report generation failed');
                 }
 
-                showToast(`Job order ${data.job_no} generated successfully! Downloading...`, 'success');
-
-                // Auto-download the report
-                if (data.downloadUrl) {
-                    triggerDownload(data.downloadUrl, data.fileName || `Job_${data.job_no}.xlsx`);
-                }
+                const savedPath = data.savedPath || data.folder;
+                showToast(`Job order ${data.job_no} generated successfully! Saved to: ${savedPath}`, 'success');
 
                 // Refresh the page to update the list
                 setTimeout(() => loadApprovals(), 1500);
             } catch (err) {
                 showToast(err.message || 'Failed to generate report', 'error');
             }
-        }
-
-        // Trigger file download
-        function triggerDownload(url, filename) {
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
         }
 
         async function respondToApproval(token, action) {

@@ -15,6 +15,9 @@ const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const successModal = document.getElementById('successModal');
 const jobForm = document.getElementById('jobForm');
+const settingsModal = document.getElementById('settingsModal');
+const settingsForm = document.getElementById('settingsForm');
+const settingsBtn = document.getElementById('settingsBtn');
 
 // =============================================================================
 // INITIALIZATION
@@ -109,6 +112,32 @@ function setupEventListeners() {
 
     if (staffSigSelect) {
         staffSigSelect.addEventListener('change', () => updateSignaturePreview('staff'));
+    }
+
+    // Settings button
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', openSettingsModal);
+    }
+
+    // Settings modal close buttons
+    const closeSettingsModal = document.getElementById('closeSettingsModal');
+    const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+
+    if (closeSettingsModal) {
+        closeSettingsModal.addEventListener('click', () => {
+            settingsModal.classList.remove('active');
+        });
+    }
+
+    if (cancelSettingsBtn) {
+        cancelSettingsBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('active');
+        });
+    }
+
+    // Settings form submit
+    if (settingsForm) {
+        settingsForm.addEventListener('submit', handleSaveSettings);
     }
 
     // Attachment handlers
@@ -273,6 +302,59 @@ function showLoginError(message) {
 function hideLoginError() {
     if (loginError) {
         loginError.style.display = 'none';
+    }
+}
+
+// =============================================================================
+// USER SETTINGS
+// =============================================================================
+
+async function openSettingsModal() {
+    if (!settingsModal) return;
+
+    // Load current settings
+    try {
+        const response = await fetch('/api/user/settings', { credentials: 'include' });
+        const data = await response.json();
+
+        if (data.success) {
+            const savePathInput = document.getElementById('savePathInput');
+            if (savePathInput) {
+                savePathInput.value = data.settings.savePath || '';
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load settings:', error);
+    }
+
+    settingsModal.classList.add('active');
+}
+
+async function handleSaveSettings(e) {
+    e.preventDefault();
+
+    const savePathInput = document.getElementById('savePathInput');
+    const savePath = savePathInput ? savePathInput.value.trim() : '';
+
+    try {
+        const response = await fetch('/api/user/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ savePath })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('Settings saved successfully!', 'success');
+            settingsModal.classList.remove('active');
+        } else {
+            showToast(data.error || 'Failed to save settings', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to save settings:', error);
+        showToast('Failed to save settings', 'error');
     }
 }
 
@@ -467,27 +549,14 @@ async function generateReport(data) {
     const result = await response.json();
 
     if (result.success) {
-        showSuccessModal(result.job_no, result.downloadUrl);
+        showSuccessModal(result.job_no, result.savedPath);
         showToast(`Job order ${result.job_no} created successfully!`, 'success');
 
-        // Auto-download the report
-        if (result.downloadUrl) {
-            triggerDownload(result.downloadUrl, result.fileName || `Job_${result.job_no}.xlsx`);
-        }
+        // Clear form after successful generation
+        resetForm();
     } else {
         showToast(result.error || 'Failed to generate report', 'error');
     }
-}
-
-// Trigger file download
-function triggerDownload(url, filename) {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
 }
 
 async function requestSignatureApproval(reportData, staffUserId) {
@@ -539,17 +608,15 @@ function showApprovalRequestedModal() {
     }
 }
 
-function showSuccessModal(jobNumber, downloadUrl) {
+function showSuccessModal(jobNumber, savedPath) {
     if (successModal) {
         const successMessage = document.getElementById('successMessage');
         if (successMessage) {
-            if (downloadUrl) {
+            if (savedPath) {
                 successMessage.innerHTML = `
                     Job Order <strong>#${jobNumber}</strong> has been generated successfully.<br><br>
-                    <small>Your download should start automatically.</small><br>
-                    <a href="${downloadUrl}" download class="btn btn-primary btn-sm" style="margin-top: 10px;">
-                        Download Again
-                    </a>
+                    <small>Saved to:</small><br>
+                    <code style="font-size: 12px; background: var(--bg-secondary); padding: 8px; border-radius: 4px; display: block; margin-top: 8px; word-break: break-all;">${savedPath}</code>
                 `;
             } else {
                 successMessage.textContent = `Job Order #${jobNumber} has been generated successfully.`;
