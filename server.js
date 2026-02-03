@@ -48,9 +48,10 @@ function loadDatabase() {
   return { users: {}, invitations: {}, signatures: {}, pendingApprovals: {} };
 }
 
-// Ensure pendingApprovals exists in loaded database
+// Ensure all required structures exist in loaded database
 function ensureDbStructure(db) {
   if (!db.pendingApprovals) db.pendingApprovals = {};
+  if (!db.userSettings) db.userSettings = {};
   return db;
 }
 
@@ -590,6 +591,67 @@ app.get('/auth/me', (req, res) => {
 });
 
 // =============================================================================
+// USER SETTINGS API
+// =============================================================================
+
+// Get user settings
+app.get('/api/user/settings', (req, res) => {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const userEmail = req.session.user.email?.toLowerCase();
+  const settings = db.userSettings[userEmail] || {};
+
+  res.json({
+    success: true,
+    settings: {
+      savePath: settings.savePath || '',
+      ...settings
+    }
+  });
+});
+
+// Update user settings
+app.post('/api/user/settings', (req, res) => {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const userEmail = req.session.user.email?.toLowerCase();
+  const { savePath } = req.body;
+
+  // Validate the save path if provided
+  if (savePath && savePath.trim()) {
+    // Basic validation - check if path looks valid
+    const trimmedPath = savePath.trim();
+
+    // Allow network paths (\\server\share) and local paths
+    if (!trimmedPath.match(/^(\\\\|\/|[A-Za-z]:)/)) {
+      return res.status(400).json({
+        error: 'Invalid path format. Use a full path like \\\\server\\share or C:\\folder'
+      });
+    }
+  }
+
+  // Update settings
+  if (!db.userSettings[userEmail]) {
+    db.userSettings[userEmail] = {};
+  }
+
+  db.userSettings[userEmail].savePath = savePath?.trim() || '';
+  db.userSettings[userEmail].updatedAt = new Date().toISOString();
+
+  saveDatabase(db);
+
+  res.json({
+    success: true,
+    message: 'Settings saved successfully',
+    settings: db.userSettings[userEmail]
+  });
+});
+
+// =============================================================================
 // ADMIN ROUTES - LDAP DIRECTORY SEARCH
 // =============================================================================
 
@@ -891,11 +953,13 @@ function getJobOrderMetadata(itemName) {
     const excelFile = `Job_${jobNo}.xlsx`;
     const excelPath = path.join(itemPath, excelFile);
 
-    // Count attachments (all files except the Excel report)
+    // Count attachments from the attachments subfolder
     let attachmentCount = 0;
     try {
-      const folderContents = fs.readdirSync(itemPath);
-      attachmentCount = folderContents.filter(f => f !== excelFile).length;
+      const attachmentsPath = path.join(itemPath, 'attachments');
+      if (fs.existsSync(attachmentsPath)) {
+        attachmentCount = fs.readdirSync(attachmentsPath).length;
+      }
     } catch (e) {}
 
     return {
@@ -1068,14 +1132,24 @@ app.get('/api/approvals/pending', (req, res) => {
 });
 
 // Request signature approval (when generating report with staff signature)
-app.post('/api/approvals/request', leaderGuard, async (req, res) => {
+// Uses uploadAttachments middleware to handle file uploads
+app.post('/api/approvals/request', leaderGuard, uploadAttachments.array('attachments', 20), async (req, res) => {
   try {
     const user = req.session.user;
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { staffUserId, reportData } = req.body;
+    // Parse reportData from FormData (sent as JSON string)
+    let reportData;
+    try {
+      reportData = JSON.parse(req.body.reportData || '{}');
+    } catch (e) {
+      reportData = req.body.reportData || {};
+    }
+
+    const staffUserId = req.body.staffUserId;
+    const attachments = req.files || [];
 
     if (!staffUserId) {
       return res.status(400).json({ error: 'Staff user ID is required' });
@@ -1091,13 +1165,64 @@ app.post('/api/approvals/request', leaderGuard, async (req, res) => {
     const token = uuidv4();
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // Store pending approval
+    // Create folder for attachments (same naming convention as reports)
+    // Will be reused when generating the report after approval
+    let folderName = null;
+    let folderPath = null;
+
+    if (attachments.length > 0) {
+      const now = new Date();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const month = monthNames[now.getMonth()];
+      const day = String(now.getDate()).padStart(2, '0');
+      // Use token in folder name to ensure uniqueness for pending approvals
+      folderName = `Pending_${token.substring(0, 8)}_${month}_${day}`;
+      folderPath = path.join(REPORTS_DIR, folderName);
+
+      // Create the folder
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+      }
+
+      // Create attachments subfolder and move files
+      const attachmentsFolder = path.join(folderPath, 'attachments');
+      if (!fs.existsSync(attachmentsFolder)) {
+        fs.mkdirSync(attachmentsFolder, { recursive: true });
+      }
+
+      for (const file of attachments) {
+        try {
+          const originalName = file.originalname;
+          let destPath = path.join(attachmentsFolder, originalName);
+
+          // Handle duplicate filenames
+          let counter = 1;
+          while (fs.existsSync(destPath)) {
+            const ext = path.extname(originalName);
+            const base = path.basename(originalName, ext);
+            destPath = path.join(attachmentsFolder, `${base}_${counter}${ext}`);
+            counter++;
+          }
+
+          // Move file from temp to destination
+          fs.renameSync(file.path, destPath);
+        } catch (err) {
+          console.error(`Failed to move attachment ${file.originalname}:`, err);
+          try { fs.unlinkSync(file.path); } catch (e) {}
+        }
+      }
+    }
+
+    // Store pending approval with folder info
     db.pendingApprovals[token] = {
       staffUserId: staffUserId.toLowerCase(),
       staffName: staffSig.name,
       staffEmail: staffSig.email,
       signatureUrl: `/signatures/${staffSig.filename}`,
       reportData: reportData,
+      folderName: folderName,
+      folderPath: folderPath,
+      attachmentCount: attachments.length,
       status: 'pending',
       createdBy: user.email,
       createdByName: user.name || user.username,
@@ -1131,6 +1256,7 @@ app.post('/api/approvals/request', leaderGuard, async (req, res) => {
     res.json({
       success: true,
       token,
+      attachmentCount: attachments.length,
       message: 'Approval request sent to staff member'
     });
   } catch (err) {
@@ -1279,15 +1405,42 @@ app.post('/api/approvals/:token/generate', leaderGuard, async (req, res) => {
       _approvalToken: token
     };
 
-    const { jobNo, folderPath, excelPath } = await generateJobOrderReport(reportData);
+    // Pass existing folder info if attachments were saved during approval request
+    const existingFolder = approval.folderPath && fs.existsSync(approval.folderPath)
+      ? { folderPath: approval.folderPath, folderName: approval.folderName }
+      : null;
+
+    const { jobNo, folderName, folderPath, excelFileName, excelPath } = await generateJobOrderReport(reportData, [], existingFolder);
+
+    // Get user's custom save path
+    const userEmail = user.email?.toLowerCase();
+    const userSettings = db.userSettings[userEmail] || {};
+    let savedPath = folderPath;
+
+    // If user has a custom save path, copy the folder there
+    if (userSettings.savePath) {
+      try {
+        const customFolderPath = path.join(userSettings.savePath, folderName);
+        await copyFolderRecursive(folderPath, customFolderPath);
+        savedPath = customFolderPath;
+      } catch (copyErr) {
+        console.error('Failed to copy to custom path:', copyErr);
+        // Continue with default path - don't fail the whole operation
+      }
+    }
 
     approval.generatedAt = new Date().toISOString();
+    approval.jobNo = jobNo;
+    approval.savedPath = savedPath;
     saveDatabase(db);
 
     res.json({
       success: true,
       file: excelPath,
       folder: folderPath,
+      folderName: folderName,
+      fileName: excelFileName,
+      savedPath: savedPath,
       job_no: jobNo,
       message: `Job order ${jobNo} generated successfully`
     });
@@ -1361,7 +1514,28 @@ function formatDate(dateStr) {
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
-async function generateJobOrderReport(data, attachments = []) {
+// Helper to copy folder recursively to custom save path
+async function copyFolderRecursive(src, dest) {
+  // Create destination folder
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
+  }
+
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      await copyFolderRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
+async function generateJobOrderReport(data, attachments = [], existingFolder = null) {
   const jobNo = getNextJobNo();
 
   // Create folder with naming convention: Job_1000_Feb_03
@@ -1370,11 +1544,25 @@ async function generateJobOrderReport(data, attachments = []) {
   const month = monthNames[now.getMonth()];
   const day = String(now.getDate()).padStart(2, '0');
   const folderName = `Job_${jobNo}_${month}_${day}`;
-  const folderPath = path.join(REPORTS_DIR, folderName);
+  let folderPath = path.join(REPORTS_DIR, folderName);
 
-  // Create the folder
-  if (!fs.existsSync(folderPath)) {
-    fs.mkdirSync(folderPath, { recursive: true });
+  // If there's an existing folder (from approval request with attachments), rename it
+  if (existingFolder && existingFolder.folderPath && fs.existsSync(existingFolder.folderPath)) {
+    try {
+      // Rename the Pending folder to the final Job folder name
+      fs.renameSync(existingFolder.folderPath, folderPath);
+    } catch (err) {
+      console.error('Failed to rename existing folder, creating new one:', err);
+      // If rename fails, create new folder
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+      }
+    }
+  } else {
+    // Create new folder
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+    }
   }
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(TEMPLATE_FILE);
@@ -1438,11 +1626,7 @@ async function generateJobOrderReport(data, attachments = []) {
     pattern: 'none'
   };
 
-  // Explicit no-fill style for unselected cells
-  const clearFill = {
-    type: 'pattern',
-    pattern: 'none'
-  };
+
 
   // Collect which cells should be highlighted yellow
   const cellsToHighlight = new Set();
@@ -1555,13 +1739,19 @@ async function generateJobOrderReport(data, attachments = []) {
   const excelPath = path.join(folderPath, excelFileName);
   await workbook.xlsx.writeFile(excelPath);
 
-  // Move attachments to the folder
+  // Move attachments to a subfolder
   if (attachments && attachments.length > 0) {
+    // Create attachments subfolder
+    const attachmentsFolder = path.join(folderPath, 'attachments');
+    if (!fs.existsSync(attachmentsFolder)) {
+      fs.mkdirSync(attachmentsFolder, { recursive: true });
+    }
+
     for (const file of attachments) {
       try {
         // Get original filename without uuid prefix
         const originalName = file.originalname;
-        const destPath = path.join(folderPath, originalName);
+        const destPath = path.join(attachmentsFolder, originalName);
 
         // Handle duplicate filenames
         let finalPath = destPath;
@@ -1569,7 +1759,7 @@ async function generateJobOrderReport(data, attachments = []) {
         while (fs.existsSync(finalPath)) {
           const ext = path.extname(originalName);
           const base = path.basename(originalName, ext);
-          finalPath = path.join(folderPath, `${base}_${counter}${ext}`);
+          finalPath = path.join(attachmentsFolder, `${base}_${counter}${ext}`);
           counter++;
         }
 
@@ -1583,7 +1773,7 @@ async function generateJobOrderReport(data, attachments = []) {
     }
   }
 
-  return { jobNo, folderPath, excelPath };
+  return { jobNo, folderName, folderPath, excelFileName, excelPath };
 }
 
 app.get('/api/get-job-no', (req, res) => {
@@ -1595,12 +1785,32 @@ app.post('/api/generate', leaderGuard, uploadAttachments.array('attachments', 20
   try {
     const data = req.body;
     const attachments = req.files || [];
-    const { jobNo, folderPath, excelPath } = await generateJobOrderReport(data, attachments);
+    const { jobNo, folderName, folderPath, excelFileName, excelPath } = await generateJobOrderReport(data, attachments);
+
+    // Get user's custom save path
+    const userEmail = req.session.user?.email?.toLowerCase();
+    const userSettings = db.userSettings[userEmail] || {};
+    let savedPath = folderPath;
+
+    // If user has a custom save path, copy the folder there
+    if (userSettings.savePath) {
+      try {
+        const customFolderPath = path.join(userSettings.savePath, folderName);
+        await copyFolderRecursive(folderPath, customFolderPath);
+        savedPath = customFolderPath;
+      } catch (copyErr) {
+        console.error('Failed to copy to custom path:', copyErr);
+        // Continue with default path - don't fail the whole operation
+      }
+    }
 
     res.json({
       success: true,
       file: excelPath,
       folder: folderPath,
+      folderName: folderName,
+      fileName: excelFileName,
+      savedPath: savedPath,
       job_no: jobNo,
       attachmentCount: attachments.length,
       message: `Job order ${jobNo} generated successfully`

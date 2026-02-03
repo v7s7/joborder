@@ -15,6 +15,9 @@ const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const successModal = document.getElementById('successModal');
 const jobForm = document.getElementById('jobForm');
+const settingsModal = document.getElementById('settingsModal');
+const settingsForm = document.getElementById('settingsForm');
+const settingsBtn = document.getElementById('settingsBtn');
 
 // =============================================================================
 // INITIALIZATION
@@ -109,6 +112,32 @@ function setupEventListeners() {
 
     if (staffSigSelect) {
         staffSigSelect.addEventListener('change', () => updateSignaturePreview('staff'));
+    }
+
+    // Settings button
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', openSettingsModal);
+    }
+
+    // Settings modal close buttons
+    const closeSettingsModal = document.getElementById('closeSettingsModal');
+    const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+
+    if (closeSettingsModal) {
+        closeSettingsModal.addEventListener('click', () => {
+            settingsModal.classList.remove('active');
+        });
+    }
+
+    if (cancelSettingsBtn) {
+        cancelSettingsBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('active');
+        });
+    }
+
+    // Settings form submit
+    if (settingsForm) {
+        settingsForm.addEventListener('submit', handleSaveSettings);
     }
 
     // Attachment handlers
@@ -273,6 +302,59 @@ function showLoginError(message) {
 function hideLoginError() {
     if (loginError) {
         loginError.style.display = 'none';
+    }
+}
+
+// =============================================================================
+// USER SETTINGS
+// =============================================================================
+
+async function openSettingsModal() {
+    if (!settingsModal) return;
+
+    // Load current settings
+    try {
+        const response = await fetch('/api/user/settings', { credentials: 'include' });
+        const data = await response.json();
+
+        if (data.success) {
+            const savePathInput = document.getElementById('savePathInput');
+            if (savePathInput) {
+                savePathInput.value = data.settings.savePath || '';
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load settings:', error);
+    }
+
+    settingsModal.classList.add('active');
+}
+
+async function handleSaveSettings(e) {
+    e.preventDefault();
+
+    const savePathInput = document.getElementById('savePathInput');
+    const savePath = savePathInput ? savePathInput.value.trim() : '';
+
+    try {
+        const response = await fetch('/api/user/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ savePath })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showToast('Settings saved successfully!', 'success');
+            settingsModal.classList.remove('active');
+        } else {
+            showToast(data.error || 'Failed to save settings', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to save settings:', error);
+        showToast('Failed to save settings', 'error');
     }
 }
 
@@ -467,22 +549,33 @@ async function generateReport(data) {
     const result = await response.json();
 
     if (result.success) {
-        showSuccessModal(result.job_no);
+        showSuccessModal(result.job_no, result.savedPath);
         showToast(`Job order ${result.job_no} created successfully!`, 'success');
+
+        // Clear form after successful generation
+        resetForm();
     } else {
         showToast(result.error || 'Failed to generate report', 'error');
     }
 }
 
 async function requestSignatureApproval(reportData, staffUserId) {
+    // Use FormData to support file uploads (same as generateReport)
+    const formData = new FormData();
+
+    // Add report data as JSON string
+    formData.append('reportData', JSON.stringify(reportData));
+    formData.append('staffUserId', staffUserId);
+
+    // Add attachments
+    for (const file of selectedFiles) {
+        formData.append('attachments', file);
+    }
+
     const response = await fetch('/api/approvals/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-            staffUserId: staffUserId,
-            reportData: reportData
-        })
+        body: formData  // No Content-Type header - browser sets it with boundary
     });
 
     if (response.status === 401) {
@@ -515,11 +608,19 @@ function showApprovalRequestedModal() {
     }
 }
 
-function showSuccessModal(jobNumber) {
+function showSuccessModal(jobNumber, savedPath) {
     if (successModal) {
         const successMessage = document.getElementById('successMessage');
         if (successMessage) {
-            successMessage.textContent = `Job Order #${jobNumber} has been generated successfully.`;
+            if (savedPath) {
+                successMessage.innerHTML = `
+                    Job Order <strong>#${jobNumber}</strong> has been generated successfully.<br><br>
+                    <small>Saved to:</small><br>
+                    <code style="font-size: 12px; background: var(--bg-secondary); padding: 8px; border-radius: 4px; display: block; margin-top: 8px; word-break: break-all;">${savedPath}</code>
+                `;
+            } else {
+                successMessage.textContent = `Job Order #${jobNumber} has been generated successfully.`;
+            }
         }
         successModal.classList.add('active');
     }
@@ -564,6 +665,9 @@ function setupAttachmentHandlers() {
     const attachmentList = document.getElementById('attachmentList');
 
     if (!dropzone || !fileInput) return;
+
+    // Prevent file input clicks from bubbling to dropzone (which would trigger another click)
+    fileInput.addEventListener('click', (e) => e.stopPropagation());
 
     // Click to browse
     dropzone.addEventListener('click', () => fileInput.click());

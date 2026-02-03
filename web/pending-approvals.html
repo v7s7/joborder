@@ -443,8 +443,11 @@
                     throw new Error(data.error || 'Report generation failed');
                 }
 
-                showToast(`Job order ${data.job_no} generated successfully`, 'success');
-                window.location.href = '/reports.html';
+                const savedPath = data.savedPath || data.folder;
+                showToast(`Job order ${data.job_no} generated successfully! Saved to: ${savedPath}`, 'success');
+
+                // Refresh the page to update the list
+                setTimeout(() => loadApprovals(), 1500);
             } catch (err) {
                 showToast(err.message || 'Failed to generate report', 'error');
             }
