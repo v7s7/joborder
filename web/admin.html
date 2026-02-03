@@ -24,16 +24,52 @@
                 <div class="nav-section">
                     <div class="nav-section-title">Main Menu</div>
                     <a href="/dashboard.html" class="nav-item">
-                        Dashboard
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M3 10.5L12 3l9 7.5"></path>
+                                <path d="M5 9.5V21h14V9.5"></path>
+                            </svg>
+                        </span>
+                        <span>Dashboard</span>
                     </a>
-                    <a href="/" class="nav-item">
-                        New Job Order
+                    <a href="/" class="nav-item" id="newJobOrderNav">
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 5v14"></path>
+                                <path d="M5 12h14"></path>
+                                <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                            </svg>
+                        </span>
+                        <span>New Job Order</span>
                     </a>
-                    <a href="/reports.html" class="nav-item">
-                        Reports
+                    <a href="/reports.html" class="nav-item" id="reportsNav">
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M3 3v18h18"></path>
+                                <path d="M7 15v3"></path>
+                                <path d="M12 11v7"></path>
+                                <path d="M17 7v11"></path>
+                            </svg>
+                        </span>
+                        <span>Reports</span>
+                    </a>
+                    <a href="/staff-reports.html" class="nav-item">
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M16 11a4 4 0 1 0-8 0"></path>
+                                <path d="M4 21a8 8 0 0 1 16 0"></path>
+                            </svg>
+                        </span>
+                        <span>Staff Reports</span>
                     </a>
                     <a href="/pending-approvals.html" class="nav-item">
-                        Pending Approvals
+                        <span class="nav-item-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="12" cy="12" r="9"></circle>
+                                <path d="M12 7v5l3 3"></path>
+                            </svg>
+                        </span>
+                        <span id="navApprovalLabel">Pending Approvals</span>
                         <span class="nav-item-badge" id="approvalsBadge" style="display: none;">0</span>
                     </a>
                 </div>

@@ -1424,10 +1424,20 @@ body {
     padding: var(--space-4);
     border-radius: var(--radius-lg);
     transition: background var(--transition-fast);
+    width: 100%;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
 }
 
 .list-item:hover {
     background: var(--bg-tertiary);
+}
+
+.list-item.active {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
 }
 
 .list-item + .list-item {
@@ -1457,6 +1467,15 @@ body {
 .list-item-actions {
     display: flex;
     gap: var(--space-2);
+}
+
+.text-link {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.text-link:hover {
+    text-decoration: underline;
 }
 
 /* =============================================================================

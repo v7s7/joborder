@@ -57,6 +57,7 @@ function loadDatabase() {
 function ensureDbStructure(db) {
   if (!db.pendingApprovals) db.pendingApprovals = {};
   if (!db.userSettings) db.userSettings = {};
+  if (!db.reports) db.reports = [];
   return db;
 }
 
@@ -1027,6 +1028,37 @@ async function createFolderArchive(folderPath, folderName) {
   return { tempDir, zipPath };
 }
 
+function addReportEntry({ jobNo, folderName, fileName, reportData, staffInfo, createdBy }) {
+  const nowIso = new Date().toISOString();
+  const entry = {
+    jobNo,
+    folderName,
+    fileName,
+    createdAt: nowIso,
+    main_date: reportData.main_date || reportData.date || '',
+    work_type: reportData.work_type || '',
+    department: reportData.department || '',
+    objective: reportData.objective || '',
+    description: reportData.description || '',
+    duration_days: reportData.duration_days || '',
+    duration_weeks: reportData.duration_weeks || '',
+    duration_months: reportData.duration_months || '',
+    duration_years: reportData.duration_years || '',
+    start_date: reportData.start_date || '',
+    end_date: reportData.end_date || '',
+    note: reportData.note || '',
+    remarks: reportData.remarks || '',
+    staff_signature: staffInfo?.userId || reportData.staff_signature || '',
+    staff_name: staffInfo?.name || '',
+    staff_email: staffInfo?.email || '',
+    created_by: createdBy?.email || createdBy?.username || ''
+  };
+
+  db.reports.push(entry);
+  saveDatabase(db);
+  return entry;
+}
+
 // Dashboard statistics
 app.get('/api/dashboard/stats', (req, res) => {
   try {
@@ -1147,6 +1179,57 @@ app.get('/api/reports/:jobNo/download', leaderGuard, async (req, res) => {
     console.error('Download report error:', err);
     res.status(500).json({ error: 'Failed to download report' });
   }
+});
+
+app.get('/api/staff/reports', leaderGuard, (req, res) => {
+  const approved = Object.entries(db.signatures)
+    .filter(([_, sig]) => sig.status === 'approved')
+    .map(([userId, sig]) => {
+      const count = db.reports.filter(report => report.staff_signature === userId).length;
+      return {
+        userId,
+        name: sig.name,
+        email: sig.email,
+        taskCount: count
+      };
+    })
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+
+  res.json({ staff: approved });
+});
+
+app.get('/api/staff/reports/:userId', leaderGuard, (req, res) => {
+  const userId = req.params.userId.toLowerCase();
+  const reports = db.reports
+    .filter(report => report.staff_signature === userId)
+    .map(report => {
+      const attachments = [];
+      if (report.folderName) {
+        const attachmentsDir = path.join(REPORTS_DIR, report.folderName, 'attachments');
+        if (fs.existsSync(attachmentsDir)) {
+          const files = fs.readdirSync(attachmentsDir);
+          files.forEach(file => {
+            const filePath = path.join(attachmentsDir, file);
+            const stat = fs.statSync(filePath);
+            attachments.push({
+              name: file,
+              size: stat.size,
+              url: `/Generated_Reports/${report.folderName}/attachments/${encodeURIComponent(file)}`
+            });
+          });
+        }
+      }
+
+      return {
+        ...report,
+        attachments,
+        downloadUrl: report.folderName
+          ? `/api/reports/${report.jobNo}/download?folderName=${encodeURIComponent(report.folderName)}`
+          : `/api/reports/${report.jobNo}/download`
+      };
+    });
+
+  res.json({ reports });
 });
 
 // Serve generated reports for download
@@ -1471,6 +1554,19 @@ app.post('/api/approvals/:token/generate', leaderGuard, async (req, res) => {
       : null;
 
     const { jobNo, folderName, folderPath, excelFileName, excelPath } = await generateJobOrderReport(reportData, [], existingFolder);
+
+    addReportEntry({
+      jobNo,
+      folderName,
+      fileName: excelFileName,
+      reportData: approval.reportData || {},
+      staffInfo: {
+        userId: approval.staffUserId,
+        name: approval.staffName,
+        email: approval.staffEmail
+      },
+      createdBy: user
+    });
 
     // Get user's custom save path
     const userEmail = user.email?.toLowerCase();
@@ -1846,6 +1942,21 @@ app.post('/api/generate', leaderGuard, uploadAttachments.array('attachments', 20
     const data = req.body;
     const attachments = req.files || [];
     const { jobNo, folderName, folderPath, excelFileName, excelPath } = await generateJobOrderReport(data, attachments);
+
+    const staffUserId = data.staff_signature ? data.staff_signature.toLowerCase() : '';
+    const staffSig = staffUserId ? db.signatures[staffUserId] : null;
+    if (staffUserId) {
+      addReportEntry({
+        jobNo,
+        folderName,
+        fileName: excelFileName,
+        reportData: data,
+        staffInfo: staffSig
+          ? { userId: staffUserId, name: staffSig.name, email: staffSig.email }
+          : { userId: staffUserId, name: '', email: '' },
+        createdBy: req.session.user
+      });
+    }
 
     // Get user's custom save path
     const userEmail = req.session.user?.email?.toLowerCase();
