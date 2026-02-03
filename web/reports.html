@@ -559,7 +559,7 @@
                             <span class="badge badge-success">Completed</span>
                         </td>
                         <td>
-                            <button class="btn btn-ghost btn-sm" onclick="downloadReport('${report.jobNo}', '${report.fileName}')">
+                            <button class="btn btn-ghost btn-sm" onclick="downloadReport('${report.jobNo}', '${report.fileName}', '${report.folderName || ''}')">
                                  Download
                             </button>
                         </td>
@@ -680,10 +680,14 @@
             showToast(`Exported ${filteredReports.length} reports to CSV`);
         }
 
-        function downloadReport(jobNo, fileName) {
+        function downloadReport(jobNo, fileName, folderName) {
             const file = fileName || `Job_${jobNo}.xlsx`;
             document.getElementById('downloadFileName').textContent = file;
-            document.getElementById('downloadLink').href = `/Generated_Reports/${file}`;
+            // Build download path - include folder if available (new format: Job_1000_Feb_03/Job_1000.xlsx)
+            const downloadPath = folderName
+                ? `/Generated_Reports/${folderName}/${file}`
+                : `/Generated_Reports/${file}`;
+            document.getElementById('downloadLink').href = downloadPath;
             downloadModal.classList.add('active');
         }
 

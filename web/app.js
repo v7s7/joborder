@@ -565,6 +565,9 @@ function setupAttachmentHandlers() {
 
     if (!dropzone || !fileInput) return;
 
+    // Prevent file input clicks from bubbling to dropzone (which would trigger another click)
+    fileInput.addEventListener('click', (e) => e.stopPropagation());
+
     // Click to browse
     dropzone.addEventListener('click', () => fileInput.click());
 
