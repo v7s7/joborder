@@ -1438,11 +1438,7 @@ async function generateJobOrderReport(data, attachments = []) {
     pattern: 'none'
   };
 
-  // Explicit no-fill style for unselected cells
-  const clearFill = {
-    type: 'pattern',
-    pattern: 'none'
-  };
+
 
   // Collect which cells should be highlighted yellow
   const cellsToHighlight = new Set();
