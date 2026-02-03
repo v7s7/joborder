@@ -1310,9 +1310,8 @@ async function generateJobOrderReport(data) {
       const currentCell = ws.getCell(cell);
 
       if (field === 'end_date') {
-        const existing = currentCell.value || '';
-        const label = typeof existing === 'string' ? existing.split(':')[0] + ':' : '';
-        currentCell.value = label ? `${label} ${formattedDate}` : formattedDate;
+        // Just use the formatted date without any prefix
+        currentCell.value = formattedDate;
       } else {
         currentCell.value = formattedDate;
       }
@@ -1331,26 +1330,45 @@ async function generateJobOrderReport(data) {
 
   // Handle duration highlighting (only one highlight per category)
   const durationFields = ['duration_days', 'duration_weeks', 'duration_months', 'duration_years'];
-  const highlightFill = {
+
+  // Light blue fill to match template design (for non-selected cells)
+  const lightBlueFill = {
     type: 'pattern',
     pattern: 'solid',
-    fgColor: { argb: 'FFFFFF00' }
+    fgColor: { argb: 'FFBDD7EE' },
+    bgColor: { argb: 'FFBDD7EE' }
   };
 
+  // Yellow fill for selected cells
+  const yellowFill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFFFFF00' },
+    bgColor: { argb: 'FFFFFF00' }
+  };
+
+  // Collect which cells should be highlighted yellow
+  const cellsToHighlight = new Set();
   for (const field of durationFields) {
     const value = data[field];
-    const category = field.replace('duration_', '');
-    const categoryMap = DURATION_MAPPING[category] || {};
-
-    Object.values(categoryMap).forEach((cellAddr) => {
-      ws.getCell(cellAddr).fill = null;
-    });
-
     if (value) {
+      const category = field.replace('duration_', '');
+      const categoryMap = DURATION_MAPPING[category] || {};
       const cellAddr = categoryMap[value];
       if (cellAddr) {
-        ws.getCell(cellAddr).fill = highlightFill;
+        cellsToHighlight.add(cellAddr);
       }
+    }
+  }
+
+  // Apply fills to ALL cells from A9 to T9
+  const allDurationCells = ['A9', 'B9', 'C9', 'D9', 'E9', 'F9', 'G9', 'H9', 'I9', 'J9', 'K9', 'L9', 'M9', 'N9', 'O9', 'P9', 'Q9', 'R9', 'S9', 'T9'];
+  for (const cellAddr of allDurationCells) {
+    const cell = ws.getCell(cellAddr);
+    if (cellsToHighlight.has(cellAddr)) {
+      cell.fill = yellowFill;
+    } else {
+      cell.fill = lightBlueFill;
     }
   }
 
@@ -1379,7 +1397,7 @@ async function generateJobOrderReport(data) {
   ];
   const typeCell = ws.getCell('M3');
   typeCell.value = buildCheckboxRichText(typeOptions, typeValue);
-  typeCell.alignment = { ...(typeCell.alignment || {}), wrapText: true };
+  typeCell.alignment = { ...(typeCell.alignment || {}), wrapText: true, vertical: 'top' };
 
   // Fill department selections with text checkboxes
   const departmentValue = (data.department || '').toLowerCase();
