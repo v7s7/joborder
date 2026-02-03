@@ -86,6 +86,44 @@ const upload = multer({
   }
 });
 
+// Attachment upload configuration (for job order attachments)
+const TEMP_UPLOADS_DIR = path.join(__dirname, 'temp_uploads');
+if (!fs.existsSync(TEMP_UPLOADS_DIR)) {
+  fs.mkdirSync(TEMP_UPLOADS_DIR, { recursive: true });
+}
+
+const attachmentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, TEMP_UPLOADS_DIR);
+  },
+  filename: (req, file, cb) => {
+    // Keep original filename with uuid prefix to avoid collisions
+    const ext = path.extname(file.originalname).toLowerCase();
+    const baseName = path.basename(file.originalname, ext);
+    cb(null, `${uuidv4()}_${baseName}${ext}`);
+  }
+});
+
+const uploadAttachments = multer({
+  storage: attachmentStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max per file
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(null, false); // Skip unsupported files silently
+    }
+  }
+});
+
 // =============================================================================
 // EMAIL CONFIGURATION (Internal SMTP Relay - no auth)
 // =============================================================================
@@ -838,19 +876,48 @@ app.use('/signatures', (req, res, next) => {
 // =============================================================================
 
 /**
- * Parse job order metadata from filename and report content
+ * Parse job order metadata from folder or legacy file
  */
-function getJobOrderMetadata(filename) {
-  const match = filename.match(/Job_(\d+)\.xlsx/);
-  if (!match) return null;
+function getJobOrderMetadata(itemName) {
+  const itemPath = path.join(REPORTS_DIR, itemName);
+  const stats = fs.statSync(itemPath);
 
-  const jobNo = match[1];
-  const filePath = path.join(REPORTS_DIR, filename);
-  const stats = fs.statSync(filePath);
+  // Check if it's a folder (new format: Job_1000_Feb_03)
+  if (stats.isDirectory()) {
+    const folderMatch = itemName.match(/^Job_(\d+)_(\w+)_(\d+)$/);
+    if (!folderMatch) return null;
+
+    const jobNo = folderMatch[1];
+    const excelFile = `Job_${jobNo}.xlsx`;
+    const excelPath = path.join(itemPath, excelFile);
+
+    // Count attachments (all files except the Excel report)
+    let attachmentCount = 0;
+    try {
+      const folderContents = fs.readdirSync(itemPath);
+      attachmentCount = folderContents.filter(f => f !== excelFile).length;
+    } catch (e) {}
+
+    return {
+      jobNo,
+      folderName: itemName,
+      fileName: excelFile,
+      hasFolder: true,
+      attachmentCount,
+      date: stats.mtime.toISOString().split('T')[0],
+      createdAt: stats.mtime.toISOString()
+    };
+  }
+
+  // Legacy file format: Job_1000.xlsx
+  const fileMatch = itemName.match(/^Job_(\d+)\.xlsx$/);
+  if (!fileMatch) return null;
 
   return {
-    jobNo,
-    fileName: filename,
+    jobNo: fileMatch[1],
+    fileName: itemName,
+    hasFolder: false,
+    attachmentCount: 0,
     date: stats.mtime.toISOString().split('T')[0],
     createdAt: stats.mtime.toISOString()
   };
@@ -861,9 +928,9 @@ function getJobOrderMetadata(filename) {
  */
 function getAllReports() {
   try {
-    const files = fs.readdirSync(REPORTS_DIR);
-    return files
-      .filter(f => f.startsWith('Job_') && f.endsWith('.xlsx'))
+    const items = fs.readdirSync(REPORTS_DIR);
+    return items
+      .filter(f => f.startsWith('Job_'))
       .map(f => getJobOrderMetadata(f))
       .filter(Boolean)
       .sort((a, b) => parseInt(b.jobNo) - parseInt(a.jobNo));
@@ -1212,14 +1279,15 @@ app.post('/api/approvals/:token/generate', leaderGuard, async (req, res) => {
       _approvalToken: token
     };
 
-    const { jobNo, outputPath } = await generateJobOrderReport(reportData);
+    const { jobNo, folderPath, excelPath } = await generateJobOrderReport(reportData);
 
     approval.generatedAt = new Date().toISOString();
     saveDatabase(db);
 
     res.json({
       success: true,
-      file: outputPath,
+      file: excelPath,
+      folder: folderPath,
       job_no: jobNo,
       message: `Job order ${jobNo} generated successfully`
     });
@@ -1264,12 +1332,18 @@ const SIGNATURE_CELLS = {
 
 function getNextJobNo() {
   try {
-    const files = fs.readdirSync(REPORTS_DIR);
-    const jobNumbers = files
-      .filter(f => f.startsWith('Job_') && f.endsWith('.xlsx'))
+    const items = fs.readdirSync(REPORTS_DIR);
+    const jobNumbers = items
+      // Match folders like Job_1000_Feb_03 or legacy files like Job_1000.xlsx
+      .filter(f => f.startsWith('Job_'))
       .map(f => {
-        const match = f.match(/Job_(\d+)\.xlsx/);
-        return match ? parseInt(match[1], 10) : 0;
+        // Try folder format first: Job_1000_Feb_03
+        const folderMatch = f.match(/^Job_(\d+)_/);
+        if (folderMatch) return parseInt(folderMatch[1], 10);
+        // Try legacy file format: Job_1000.xlsx
+        const fileMatch = f.match(/^Job_(\d+)\.xlsx$/);
+        if (fileMatch) return parseInt(fileMatch[1], 10);
+        return 0;
       })
       .filter(n => n > 0);
 
@@ -1287,8 +1361,21 @@ function formatDate(dateStr) {
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
-async function generateJobOrderReport(data) {
+async function generateJobOrderReport(data, attachments = []) {
   const jobNo = getNextJobNo();
+
+  // Create folder with naming convention: Job_1000_Feb_03
+  const now = new Date();
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = monthNames[now.getMonth()];
+  const day = String(now.getDate()).padStart(2, '0');
+  const folderName = `Job_${jobNo}_${month}_${day}`;
+  const folderPath = path.join(REPORTS_DIR, folderName);
+
+  // Create the folder
+  if (!fs.existsSync(folderPath)) {
+    fs.mkdirSync(folderPath, { recursive: true });
+  }
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(TEMPLATE_FILE);
   const ws = workbook.getWorksheet(1);
@@ -1464,10 +1551,40 @@ async function generateJobOrderReport(data) {
     }
   }
 
-  const outputPath = path.join(REPORTS_DIR, `Job_${jobNo}.xlsx`);
-  await workbook.xlsx.writeFile(outputPath);
+  // Save Excel file to the folder
+  const excelFileName = `Job_${jobNo}.xlsx`;
+  const excelPath = path.join(folderPath, excelFileName);
+  await workbook.xlsx.writeFile(excelPath);
 
-  return { jobNo, outputPath };
+  // Move attachments to the folder
+  if (attachments && attachments.length > 0) {
+    for (const file of attachments) {
+      try {
+        // Get original filename without uuid prefix
+        const originalName = file.originalname;
+        const destPath = path.join(folderPath, originalName);
+
+        // Handle duplicate filenames
+        let finalPath = destPath;
+        let counter = 1;
+        while (fs.existsSync(finalPath)) {
+          const ext = path.extname(originalName);
+          const base = path.basename(originalName, ext);
+          finalPath = path.join(folderPath, `${base}_${counter}${ext}`);
+          counter++;
+        }
+
+        // Move file from temp to destination
+        fs.renameSync(file.path, finalPath);
+      } catch (err) {
+        console.error(`Failed to move attachment ${file.originalname}:`, err);
+        // Clean up temp file if move fails
+        try { fs.unlinkSync(file.path); } catch (e) {}
+      }
+    }
+  }
+
+  return { jobNo, folderPath, excelPath };
 }
 
 app.get('/api/get-job-no', (req, res) => {
@@ -1475,20 +1592,29 @@ app.get('/api/get-job-no', (req, res) => {
   res.json({ job_no: jobNo });
 });
 
-app.post('/api/generate', leaderGuard, async (req, res) => {
+app.post('/api/generate', leaderGuard, uploadAttachments.array('attachments', 20), async (req, res) => {
   try {
     const data = req.body;
-    const { jobNo, outputPath } = await generateJobOrderReport(data);
+    const attachments = req.files || [];
+    const { jobNo, folderPath, excelPath } = await generateJobOrderReport(data, attachments);
 
     res.json({
       success: true,
-      file: outputPath,
+      file: excelPath,
+      folder: folderPath,
       job_no: jobNo,
+      attachmentCount: attachments.length,
       message: `Job order ${jobNo} generated successfully`
     });
 
   } catch (err) {
     console.error('Generate error:', err);
+    // Clean up temp files on error
+    if (req.files) {
+      req.files.forEach(file => {
+        try { fs.unlinkSync(file.path); } catch (e) {}
+      });
+    }
     res.status(500).json({
       success: false,
       error: err.message || 'Failed to generate report'
