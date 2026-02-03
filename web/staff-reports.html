@@ -259,6 +259,7 @@
                     <div class="card">
                         <div class="card-header">
                             <div class="card-title" id="staffDetailTitle">Select a staff member</div>
+                            <button class="btn btn-secondary btn-sm" id="openStaffReportModal" disabled>Full Screen</button>
                         </div>
                         <div class="card-body">
                             <div class="flex items-center gap-2 mb-3">
@@ -278,6 +279,17 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Staff Report Fullscreen Modal -->
+    <div class="modal-overlay" id="staffReportModal">
+        <div class="modal modal-fullscreen">
+            <div class="modal-header">
+                <h3 class="modal-title" id="staffReportModalTitle">Staff Report</h3>
+                <button class="modal-close" id="closeStaffReportModal">&times;</button>
+            </div>
+            <div class="modal-body" id="staffReportModalBody"></div>
+        </div>
     </div>
 
     <!-- Login Modal -->
@@ -354,6 +366,10 @@
         const settingsForm = document.getElementById('settingsForm');
         const settingsBtn = document.getElementById('settingsBtn');
         const exportStaffReportBtn = document.getElementById('exportStaffReport');
+        const openStaffReportModalBtn = document.getElementById('openStaffReportModal');
+        const staffReportModal = document.getElementById('staffReportModal');
+        const staffReportModalTitle = document.getElementById('staffReportModalTitle');
+        const staffReportModalBody = document.getElementById('staffReportModalBody');
 
         document.addEventListener('DOMContentLoaded', () => {
             checkAuth();
@@ -377,6 +393,13 @@
             document.getElementById('staffSearch').addEventListener('input', handleStaffSearch);
             if (exportStaffReportBtn) {
                 exportStaffReportBtn.addEventListener('click', exportStaffReport);
+            }
+            if (openStaffReportModalBtn) {
+                openStaffReportModalBtn.addEventListener('click', openStaffReportModal);
+            }
+            const closeStaffReportModal = document.getElementById('closeStaffReportModal');
+            if (closeStaffReportModal) {
+                closeStaffReportModal.addEventListener('click', () => staffReportModal.classList.remove('active'));
             }
             document.getElementById('filterDateFrom').addEventListener('change', () => renderStaffTasks(applyFilters()));
             document.getElementById('filterDateTo').addEventListener('change', () => renderStaffTasks(applyFilters()));
@@ -582,6 +605,9 @@
 
             if (staff) {
                 title.textContent = `${staff.name || staff.userId} • ${staff.taskCount} Jobs`;
+                if (staffReportModalTitle) {
+                    staffReportModalTitle.textContent = `${staff.name || staff.userId} • Staff Report`;
+                }
             }
 
             detail.innerHTML = `
@@ -600,6 +626,9 @@
                 if (exportStaffReportBtn) {
                     exportStaffReportBtn.disabled = false;
                 }
+                if (openStaffReportModalBtn) {
+                    openStaffReportModalBtn.disabled = !selectedReports.length;
+                }
             } catch (error) {
                 detail.innerHTML = `
                     <div class="empty-state">
@@ -610,6 +639,9 @@
                 `;
                 updateSummaryCards({ totalTasks: 0, completedTasks: 0, overdueTasks: 0, onTimePercent: 0, averageDelay: 0, averageCompletion: 0 });
                 renderTaskLoadChart({});
+                if (openStaffReportModalBtn) {
+                    openStaffReportModalBtn.disabled = true;
+                }
             }
         }
 
@@ -835,18 +867,26 @@
 
         function renderStaffTasks(reports) {
             const detail = document.getElementById('staffDetail');
+            const openButton = document.getElementById('openStaffReportModal');
             if (!reports.length) {
-                detail.innerHTML = `
+                const emptyMarkup = `
                     <div class="empty-state">
                         <div class="empty-state-icon"></div>
                         <div class="empty-state-title">No jobs assigned</div>
                         <div class="empty-state-description">This staff member has no job orders yet.</div>
                     </div>
                 `;
+                detail.innerHTML = emptyMarkup;
+                if (staffReportModalBody) {
+                    staffReportModalBody.innerHTML = emptyMarkup;
+                }
+                if (openButton) {
+                    openButton.disabled = true;
+                }
                 return;
             }
 
-            detail.innerHTML = `
+            const tableMarkup = `
                 <div class="table-container">
                     <table class="table">
                         <thead>
@@ -916,6 +956,18 @@
                     </table>
                 </div>
             `;
+            detail.innerHTML = tableMarkup;
+            if (staffReportModalBody) {
+                staffReportModalBody.innerHTML = tableMarkup;
+            }
+            if (openButton) {
+                openButton.disabled = false;
+            }
+        }
+
+        function openStaffReportModal() {
+            if (!selectedReports.length) return;
+            staffReportModal.classList.add('active');
         }
 
         function getEndDate(report) {
